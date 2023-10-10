@@ -1,6 +1,6 @@
 /** \class MuRPCTnPFlatTableProducer MuRPCTnPFlatTableProducer.cc DPGAnalysis/MuonTools/plugins/MuRPCTnPFlatTableProducer.cc
  *
- * Helper class : the RPC Tag and probe segment efficiency  filler
+ * Helper class : the RPC Tag and probe efficiency  filler
  *
  * adapted from
  * https://gitlab.cern.ch/jhgoh/RPCDPGAnalysis/-/blob/855eb87b/SegmentAndTrackOnRPC/plugins/RPCTrackerMuonProbeProducer.cc
@@ -162,7 +162,10 @@ private:
     kResidualY,
     kPullX,
     kPullY,
+    kPullXV2,
+    kPullYV2,
   };
+
 
   const std::vector<std::tuple<Column, std::string, std::string> > FLOAT_COLUMNS = {
     // tag muon
@@ -184,9 +187,11 @@ private:
     {Column::kResidualY, "residual_y", "Residual Y [cm]"},
     {Column::kPullX, "pull_x", "Pull X"},
     {Column::kPullY, "pull_y", "Pull Y"},
+    {Column::kPullXV2, "pull_x_v2", "Pull X V2"},
+    {Column::kPullYV2, "pull_y_v2", "Pull Y V2"},
   };
 
-  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
+  const std::vector<std::tuple<Column, std::string, std::string> > INT8_COLUMNS = {
     {Column::kRegion, "region", "region"},
     {Column::kRing, "ring", "ring"},
     {Column::kStation, "station", "station"},
@@ -194,6 +199,9 @@ private:
     {Column::kLayer, "layer", "layer"},
     {Column::kSubsector, "subsector", "subsector"},
     {Column::kRoll, "roll", "roll"},
+  };
+
+  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
     //
     {Column::kClusterSize, "cls", "Cluster Size"},
     {Column::kBunchX, "bx", "Bunch Crossing"},
@@ -290,11 +298,15 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   // STEP 2: CREATE COLUMNS
   /////////////////////////////////////////////////////////////////////////////
   std::map<Column, std::vector<float> > float_columns;
+  std::map<Column, std::vector<int8_t> > int8_columns;
   std::map<Column, std::vector<int> > int_columns;
   std::map<Column, std::vector<bool> > bool_columns;
 
   for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
     float_columns.insert({key, {}});
+  }
+  for (const auto& [key, name, descr] : INT8_COLUMNS) {
+    int8_columns.insert({key, {}});
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
     int_columns.insert({key, {}});
@@ -304,6 +316,9 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   }
 
   for (auto& [key, value] : float_columns) {
+    value.reserve(size);
+  }
+  for (auto& [key, value] : int8_columns) {
     value.reserve(size);
   }
   for (auto& [key, value] : int_columns) {
@@ -336,27 +351,32 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
     float_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
 
     // RPC Detector Information
-    int_columns.at(Column::kRegion).push_back(det_id.region());
-    int_columns.at(Column::kRing).push_back(det_id.ring());
-    int_columns.at(Column::kStation).push_back(det_id.station());
-    int_columns.at(Column::kSector).push_back(det_id.sector());
-    int_columns.at(Column::kLayer).push_back(det_id.layer());
-    int_columns.at(Column::kSubsector).push_back(det_id.subsector());
-    int_columns.at(Column::kRoll).push_back(det_id.roll());
+    int8_columns.at(Column::kRegion).push_back(det_id.region());
+    int8_columns.at(Column::kRing).push_back(det_id.ring());
+    int8_columns.at(Column::kStation).push_back(det_id.station());
+    int8_columns.at(Column::kSector).push_back(det_id.sector());
+    int8_columns.at(Column::kLayer).push_back(det_id.layer());
+    int8_columns.at(Column::kSubsector).push_back(det_id.subsector());
+    int8_columns.at(Column::kRoll).push_back(det_id.roll());
 
     // Hit Information
     bool_columns.at(Column::kIsFiducial).push_back(isFiducial(muon_chamber_match));
     bool_columns.at(Column::kIsMatched).push_back(hit != nullptr);
 
     if (hit) {
-      const LocalPoint probe_pos{muon_chamber_match.x, muon_chamber_match.y, 0};
+      const LocalPoint probe_pos{muon_chamber_match.x, muon_chamber_match.y, 0.f};
       const LocalPoint hit_pos = hit->localPosition();
       const LocalError hit_pos_err = hit->localPositionError();
+      //
+      const float err_x = std::sqrt(hit_pos_err.xx() + std::pow(muon_chamber_match.xErr, 2));
+      const float err_y = std::sqrt(hit_pos_err.yy() + std::pow(muon_chamber_match.yErr, 2));
 
       const float residual_x = hit_pos.x() - probe_pos.x();
       const float residual_y = hit_pos.y() - probe_pos.y();
       const float pull_x = residual_x / std::sqrt(hit_pos_err.xx());
-      const float pull_y = residual_x / std::sqrt(hit_pos_err.yy());
+      const float pull_y = residual_y / std::sqrt(hit_pos_err.yy());
+      const float pull_x_v2 = residual_x / err_x;
+      const float pull_y_v2 = residual_y / err_y;
 
       int_columns.at(Column::kClusterSize).push_back(hit->clusterSize());
       int_columns.at(Column::kBunchX).push_back(hit->BunchX());
@@ -364,6 +384,8 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
       float_columns.at(Column::kResidualY).push_back(residual_y);
       float_columns.at(Column::kPullX).push_back(pull_x);
       float_columns.at(Column::kPullY).push_back(pull_y);
+      float_columns.at(Column::kPullXV2).push_back(pull_x_v2);
+      float_columns.at(Column::kPullYV2).push_back(pull_y_v2);
 
     } else {
       int_columns.at(Column::kClusterSize).push_back(DEFAULT_DOUBLE_VAL);
@@ -372,7 +394,8 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
       float_columns.at(Column::kResidualY).push_back(DEFAULT_DOUBLE_VAL);
       float_columns.at(Column::kPullX).push_back(DEFAULT_DOUBLE_VAL);
       float_columns.at(Column::kPullY).push_back(DEFAULT_DOUBLE_VAL);
-
+      float_columns.at(Column::kPullXV2).push_back(DEFAULT_DOUBLE_VAL);
+      float_columns.at(Column::kPullYV2).push_back(DEFAULT_DOUBLE_VAL);
     }
   } // measurements
 
@@ -384,6 +407,10 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
 
   for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
     const auto& vec = float_columns.at(key);
+    addColumn(table, name, vec, descr);
+  }
+  for (const auto& [key, name, descr] : INT8_COLUMNS) {
+    const auto& vec = int8_columns.at(key);
     addColumn(table, name, vec, descr);
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
