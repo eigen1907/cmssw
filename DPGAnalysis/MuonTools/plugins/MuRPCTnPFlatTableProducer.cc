@@ -191,7 +191,7 @@ private:
     {Column::kPullYV2, "pull_y_v2", "Pull Y V2"},
   };
 
-  const std::vector<std::tuple<Column, std::string, std::string> > INT8_COLUMNS = {
+  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
     {Column::kRegion, "region", "region"},
     {Column::kRing, "ring", "ring"},
     {Column::kStation, "station", "station"},
@@ -199,9 +199,6 @@ private:
     {Column::kLayer, "layer", "layer"},
     {Column::kSubsector, "subsector", "subsector"},
     {Column::kRoll, "roll", "roll"},
-  };
-
-  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
     //
     {Column::kClusterSize, "cls", "Cluster Size"},
     {Column::kBunchX, "bx", "Bunch Crossing"},
@@ -298,15 +295,11 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   // STEP 2: CREATE COLUMNS
   /////////////////////////////////////////////////////////////////////////////
   std::map<Column, std::vector<float> > float_columns;
-  std::map<Column, std::vector<int8_t> > int8_columns;
   std::map<Column, std::vector<int> > int_columns;
   std::map<Column, std::vector<bool> > bool_columns;
 
   for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
     float_columns.insert({key, {}});
-  }
-  for (const auto& [key, name, descr] : INT8_COLUMNS) {
-    int8_columns.insert({key, {}});
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
     int_columns.insert({key, {}});
@@ -316,9 +309,6 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   }
 
   for (auto& [key, value] : float_columns) {
-    value.reserve(size);
-  }
-  for (auto& [key, value] : int8_columns) {
     value.reserve(size);
   }
   for (auto& [key, value] : int_columns) {
@@ -351,13 +341,13 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
     float_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
 
     // RPC Detector Information
-    int8_columns.at(Column::kRegion).push_back(det_id.region());
-    int8_columns.at(Column::kRing).push_back(det_id.ring());
-    int8_columns.at(Column::kStation).push_back(det_id.station());
-    int8_columns.at(Column::kSector).push_back(det_id.sector());
-    int8_columns.at(Column::kLayer).push_back(det_id.layer());
-    int8_columns.at(Column::kSubsector).push_back(det_id.subsector());
-    int8_columns.at(Column::kRoll).push_back(det_id.roll());
+    int_columns.at(Column::kRegion).push_back(det_id.region());
+    int_columns.at(Column::kRing).push_back(det_id.ring());
+    int_columns.at(Column::kStation).push_back(det_id.station());
+    int_columns.at(Column::kSector).push_back(det_id.sector());
+    int_columns.at(Column::kLayer).push_back(det_id.layer());
+    int_columns.at(Column::kSubsector).push_back(det_id.subsector());
+    int_columns.at(Column::kRoll).push_back(det_id.roll());
 
     // Hit Information
     bool_columns.at(Column::kIsFiducial).push_back(isFiducial(muon_chamber_match));
@@ -407,10 +397,6 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
 
   for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
     const auto& vec = float_columns.at(key);
-    addColumn(table, name, vec, descr);
-  }
-  for (const auto& [key, name, descr] : INT8_COLUMNS) {
-    const auto& vec = int8_columns.at(key);
     addColumn(table, name, vec, descr);
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
@@ -465,7 +451,8 @@ MuRPCTnPFlatTableProducer::findTriggerObjectsMomenta(
   const trigger::TriggerObjectCollection& trigger_object_collection = trigger_event_handle->getObjects();
 
   for (trigger::size_type module_idx = 0; module_idx < trigger_event_handle->sizeFilters(); ++module_idx) {
-    const std::string& filter_label = trigger_event_handle->filterLabel(module_idx);
+    const auto filter_label_view = trigger_event_handle->filterLabel(module_idx);
+    const std::string filter_label(filter_label_view.begin(), filter_label_view.end());
 
     if (filter_module_set.count(filter_label) == 0) {
       // TODO LogDebug
