@@ -62,6 +62,10 @@
 #include "RecoMuon/MuonIdentification/interface/MuonArbitrationMethods.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "TH1D.h"
+
 class MuonMesh;
 class MuonKinkFinder;
 
@@ -281,5 +285,12 @@ private:
 
   bool arbClean_;
   std::unique_ptr<MuonMesh> meshAlgo_;
+
+  TH1D* totalTimeHist_;
+  TH1D* muonCollectionTimeHist_;
+  TH1D* linkCollectionTimeHist_;
+  TH1D* TMTimeHist_;
+  TH1D* SAMTimeHist_;
+  TH1D* fillInfoTimeHist_;
 };
 #endif

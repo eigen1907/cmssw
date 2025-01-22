@@ -21,6 +21,9 @@
   <use name="boost_regex"/>
   <use name="CommonTools/Utils"/>
   <use name="DataFormats/ParticleFlowCandidate"/>
+
+  <use name="CommonTools/UtilAlgos" />
+  
   <flags EDM_PLUGIN="1"/>
 </library>
 

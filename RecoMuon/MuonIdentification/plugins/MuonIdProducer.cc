@@ -198,6 +198,14 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
 
     inputCollectionTypes_[i] = inputType;
   }
+
+  edm::Service<TFileService> fs;
+  totalTimeHist_ = fs->make<TH1D>("totalTimeHist", "Total time for MuonIdProducer", 1000, 0., 1000000.);
+  muonCollectionTimeHist_ = fs->make<TH1D>("muonCollectionTimeHist", "muonCollection time for MuonIdProducer", 1000, 0., 1000000.);
+  linkCollectionTimeHist_ = fs->make<TH1D>("linkCollectionTimeHist", "linkCollection time for MuonIdProducer", 1000, 0., 1000000.);
+  TMTimeHist_ = fs->make<TH1D>("TMTimeHist", "TM time for MuonIdProducer", 1000, 0., 1000000.);
+  SAMTimeHist_ = fs->make<TH1D>("SAMTimeHist", "SA time for MuonIdProducer", 1000, 0., 1000000.);
+  fillInfoTimeHist_ = fs->make<TH1D>("fillInfoTimeHist", "test time for MuonIdProducer", 1000, 0., 1000000.);
 }
 
 MuonIdProducer::~MuonIdProducer() {
@@ -457,6 +465,11 @@ bool validateGlobalMuonPair(const reco::MuonTrackLinks& goodMuon, const reco::Mu
 }
 
 void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  using clock_t = std::chrono::high_resolution_clock;
+  using us_t = std::chrono::microseconds;
+
+  auto totalTimeStart = clock_t::now();
+
   auto outputMuons = std::make_unique<reco::MuonCollection>();
   auto caloMuons = std::make_unique<reco::CaloMuonCollection>();
 
@@ -466,14 +479,16 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     theShowerDigiFiller_->getDigis(iEvent);
 
   // loop over input collections
-
+  auto muonCollectionTimeStart = clock_t::now();
   // muons first - no cleaning, take as is.
   if (muonCollectionHandle_.isValid()) {
     for (const auto& muon : *muonCollectionHandle_) {
       outputMuons->push_back(muon);
     }
   }
+  auto muonCollectionTimeEnd = clock_t::now();
 
+  auto linkCollectionTimeStart = clock_t::now();
   // links second ( assume global muon type )
   if (linkCollectionHandle_.isValid()) {
     const auto nLink = linkCollectionHandle_->size();
@@ -543,7 +558,9 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       }
     }
   }
+  auto linkCollectionTimeEnd = clock_t::now();
 
+  auto TMTimeStart = clock_t::now();
   // tracker and calo muons are next
   if (innerTrackCollectionHandle_.isValid()) {
     LogTrace("MuonIdentification") << "Creating tracker muons";
@@ -634,7 +651,9 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       }
     }
   }
+  auto TMTimeEnd = clock_t::now();
 
+  auto SAMTimeStart = clock_t::now();
   // and at last the stand alone muons
   if (outerTrackCollectionHandle_.isValid()) {
     LogTrace("MuonIdentification") << "Looking for new muons among stand alone muon tracks";
@@ -682,14 +701,13 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       }
     }
   }
-
+  auto SAMTimeEnd = clock_t::now();
   if (arbitrateTrackerMuons_) {
     fillArbitrationInfo(outputMuons.get(), reco::Muon::TrackerMuon);
     fillArbitrationInfo(outputMuons.get(), reco::Muon::GEMMuon);
     fillArbitrationInfo(outputMuons.get(), reco::Muon::ME0Muon);
     arbitrateMuons(outputMuons.get(), caloMuons.get());
   }
-
   LogTrace("MuonIdentification") << "Dress up muons if it's necessary";
 
   const int nMuons = outputMuons->size();
@@ -704,6 +722,7 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   std::vector<reco::IsoDeposit> jetDepColl(nMuons);
 
   // Fill various information
+  auto fillInfoTimeStart = clock_t::now();
   for (unsigned int i = 0; i < outputMuons->size(); ++i) {
     auto& muon = outputMuons->at(i);
 
@@ -762,6 +781,7 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     cscTimeColl[i] = cscTime;
     combinedTimeColl[i] = combinedTime;
   }
+  auto fillInfoTimeEnd = clock_t::now();
 
   LogTrace("MuonIdentification") << "number of muons produced: " << outputMuons->size();
   if (fillMatching_) {
@@ -795,6 +815,30 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   }
 
   iEvent.put(std::move(caloMuons));
+  
+  auto totalTimeEnd = clock_t::now();
+
+  auto totalTimeBlock = std::chrono::duration_cast<us_t>(totalTimeEnd - totalTimeStart).count();
+  auto muonCollectionTimeBlock = std::chrono::duration_cast<us_t>(muonCollectionTimeEnd - muonCollectionTimeStart).count();
+  auto linkCollectionTimeBlock = std::chrono::duration_cast<us_t>(linkCollectionTimeEnd - linkCollectionTimeStart).count();
+  auto TMTimeBlock = std::chrono::duration_cast<us_t>(TMTimeEnd - TMTimeStart).count();
+  auto SAMTimeBlock = std::chrono::duration_cast<us_t>(SAMTimeEnd - SAMTimeStart).count();
+  auto fillInfoTimeBlock = std::chrono::duration_cast<us_t>(fillInfoTimeEnd - fillInfoTimeStart).count();
+
+  std::cout << "==================================================" << std::endl;
+  std::cout << "totalTimeBlock: " << totalTimeBlock << std::endl;
+  std::cout << "muonCollectionTimeBlock: " << muonCollectionTimeBlock << std::endl;
+  std::cout << "linkCollectionTimeBlock: " << linkCollectionTimeBlock << std::endl;
+  std::cout << "TMTimeBlock: " << TMTimeBlock << std::endl;
+  std::cout << "SAMTimeBlock: " << SAMTimeBlock << std::endl;
+  std::cout << "fillInfoTimeBlock: " << fillInfoTimeBlock << std::endl;
+
+  totalTimeHist_->Fill(totalTimeBlock);
+  muonCollectionTimeHist_->Fill(muonCollectionTimeBlock);
+  linkCollectionTimeHist_->Fill(linkCollectionTimeBlock);
+  TMTimeHist_->Fill(TMTimeBlock);
+  SAMTimeHist_->Fill(SAMTimeBlock);
+  fillInfoTimeHist_->Fill(fillInfoTimeBlock);
 }
 
 bool MuonIdProducer::isGoodTrackerMuon(const reco::Muon& muon) {
