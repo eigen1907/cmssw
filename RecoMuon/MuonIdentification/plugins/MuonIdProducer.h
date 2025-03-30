@@ -62,6 +62,9 @@
 #include "RecoMuon/MuonIdentification/interface/MuonArbitrationMethods.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 
+#include "TTree.h"
+#include <chrono> 
+
 class MuonMesh;
 class MuonKinkFinder;
 
@@ -281,5 +284,15 @@ private:
 
   bool arbClean_;
   std::unique_ptr<MuonMesh> meshAlgo_;
+
+  TTree* trackerMuonTree_;
+  int nCallMuonIdProducer_;
+  int nInnerTrack_;
+  int nGoodInnerTrack_;
+  int nCallFillMuonIdTrackerMuon_;
+  int nCallFillMuonIdStandAloneMuon_;
+  int nCallAssociate_;
+  double timeMuonIdProducer_;
+  double timeAssociate_;
 };
 #endif

@@ -43,6 +43,7 @@
 <use name="SimDataFormats/TrackingHit"/>
 <use name="TrackingTools/TrackAssociator"/>
 <use name="TrackingTools/TransientTrack"/>
+<use name="CommonTools/UtilAlgos" />
 <export>
   <lib name="1"/>
 </export>
