@@ -37,15 +37,7 @@
 
 MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
     : geomTokenRun_(esConsumes<edm::Transition::BeginRun>()),
-      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))),
-      nCallMuonIdProducer_(0),
-      nInnerTrack_(0),
-      nGoodInnerTrack_(0),
-      nCallFillMuonIdTrackerMuon_(0),
-      nCallFillMuonIdStandAloneMuon_(0),
-      nCallAssociate_(0),
-      timeMuonIdProducer_(0.0),
-      timeAssociate_(0.0) {
+      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))) {
   LogTrace("MuonIdentification") << "RecoMuon/MuonIdProducer :: Constructor called";
 
   produces<reco::MuonCollection>();
@@ -184,6 +176,15 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
   edm::InputTag gemHitTag("gemRecHits");
   gemHitToken_ = consumes<GEMRecHitCollection>(gemHitTag);
 
+  edm::InputTag dtSegmentTag("dt4DSegments");
+  dtSegmentToken_ = consumes<DTRecSegment4DCollection>(dtSegmentTag);
+  
+  edm::InputTag cscSegmentTag("cscSegments");
+  cscSegmentToken_ = consumes<CSCSegmentCollection>(cscSegmentTag);
+  
+  edm::InputTag gemSegmentTag("gemSegments");
+  gemSegmentToken_ = consumes<GEMSegmentCollection>(gemSegmentTag);
+
   //Consumes... UGH
   inputCollectionTypes_.resize(inputCollectionLabels_.size());
   for (unsigned int i = 0; i < inputCollectionLabels_.size(); ++i) {
@@ -212,16 +213,37 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
   }
 
   edm::Service<TFileService> fs;
-  trackerMuonTree_ = fs->make<TTree>("trackerMuonTree", "Tracker Muon Counters");
-  trackerMuonTree_->Branch("nCallMuonIdProducer", &nCallMuonIdProducer_, "nCallMuonIdProducer/I");
-  trackerMuonTree_->Branch("nInnerTrack", &nInnerTrack_, "nInnerTrack/I");
-  trackerMuonTree_->Branch("nGoodInnerTrack", &nGoodInnerTrack_, "nGoodInnerTrack/I");
-  trackerMuonTree_->Branch("nCallFillMuonIdTrackerMuon", &nCallFillMuonIdTrackerMuon_, "nCallFillMuonIdTrackerMuon/I");
-  trackerMuonTree_->Branch("nCallFillMuonIdStandAloneMuon", &nCallFillMuonIdStandAloneMuon_, "nCallFillMuonIdStandAloneMuon/I");
-  trackerMuonTree_->Branch("nCallAssociate", &nCallAssociate_, "nCallAssociate/I");
-  trackerMuonTree_->Branch("timeMuonIdProducer", &timeMuonIdProducer_, "timeMuonIdProducer/D");
-  trackerMuonTree_->Branch("timeAssociate", &timeAssociate_, "timeAssociate/D");
+  profileTree_ = fs->make<TTree>("profileTree", "Profile Information");
+  profileTree_->Branch("nCallMuonIdProducer",           &profileInfo_.nCallMuonIdProducer, "nCallMuonIdProducer/I");
+  profileTree_->Branch("nInnerTrack",                   &profileInfo_.nInnerTrack, "nInnerTrack/I");
+  profileTree_->Branch("nGoodInnerTrack",               &profileInfo_.nGoodInnerTrack, "nGoodInnerTrack/I");
+  profileTree_->Branch("nCallFillMuonIdTrackerMuon",    &profileInfo_.nCallFillMuonIdTrackerMuon, "nCallFillMuonIdTrackerMuon/I");
+  profileTree_->Branch("nCallFillMuonIdStandAloneMuon", &profileInfo_.nCallFillMuonIdStandAloneMuon, "nCallFillMuonIdStandAloneMuon/I");
+  profileTree_->Branch("nCallAssociate",                &profileInfo_.nCallAssociate, "nCallAssociate/I");
+  profileTree_->Branch("timeMuonIdProducer",            &profileInfo_.timeMuonIdProducer, "timeMuonIdProducer/D");
+  profileTree_->Branch("timeAssociate",                 &profileInfo_.timeAssociate, "timeAssociate/D");
+
+  trackerMuonTree_ = fs->make<TTree>("trackerMuonTree", "Track-Muon Information");
+  trackerMuonTree_->Branch("trackPt",           &trackerMuonInfo_.trackPt);
+  trackerMuonTree_->Branch("trackP",            &trackerMuonInfo_.trackP);
+  trackerMuonTree_->Branch("trackEta",          &trackerMuonInfo_.trackEta);
+  trackerMuonTree_->Branch("trackPhi",          &trackerMuonInfo_.trackPhi);
+
+  trackerMuonTree_->Branch("isGoodTrackerMuon", &trackerMuonInfo_.isGoodTrackerMuon);
+  trackerMuonTree_->Branch("isGoodRPCMuon",     &trackerMuonInfo_.isGoodRPCMuon);
+  trackerMuonTree_->Branch("isGoodGEMMuon",     &trackerMuonInfo_.isGoodGEMMuon);
+  trackerMuonTree_->Branch("isGoodME0Muon",     &trackerMuonInfo_.isGoodME0Muon);
+  trackerMuonTree_->Branch("isOutputMuon",      &trackerMuonInfo_.isOutputMuon);
+
+  muonHitSegTree_ = fs->make<TTree>("muonHitSegTree", "Muon Detector Information");
+  muonHitSegTree_->Branch("rpcRecHitRawId",  &muonHitSegInfo_.rpcRecHitRawId);
+  muonHitSegTree_->Branch("gemRecHitRawId",  &muonHitSegInfo_.gemRecHitRawId);
+  
+  muonHitSegTree_->Branch("dtSegmentRawId",  &muonHitSegInfo_.dtSegmentRawId);
+  muonHitSegTree_->Branch("cscSegmentRawId", &muonHitSegInfo_.cscSegmentRawId);
+  muonHitSegTree_->Branch("gemSegmentRawId", &muonHitSegInfo_.gemSegmentRawId);
 }
+
 
 MuonIdProducer::~MuonIdProducer() {
   // TimingReport::current()->dump(std::cout);
@@ -291,8 +313,13 @@ void MuonIdProducer::init(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       throw cms::Exception("FatalError") << "Unknown input collection type: #" << ICTypes::toStr(inputType);
   }
 
+  iEvent.getByToken(dtSegmentToken_, dtSegmentHandle_);
+  iEvent.getByToken(cscSegmentToken_, cscSegmentHandle_);
+  iEvent.getByToken(gemSegmentToken_, gemSegmentHandle_);
+
   iEvent.getByToken(rpcHitToken_, rpcHitHandle_);
   iEvent.getByToken(gemHitToken_, gemHitHandle_);
+
   if (fillGlobalTrackQuality_)
     iEvent.getByToken(glbQualToken_, glbQualHandle_);
   if (selectHighPurity_)
@@ -480,18 +507,17 @@ bool validateGlobalMuonPair(const reco::MuonTrackLinks& goodMuon, const reco::Mu
 }
 
 void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  // Update event-level counters
   auto start = std::chrono::high_resolution_clock::now();
-  nCallMuonIdProducer_ = 0;
-  nInnerTrack_ = 0;
-  nGoodInnerTrack_ = 0;
-  nCallFillMuonIdTrackerMuon_ = 0;
-  nCallFillMuonIdStandAloneMuon_ = 0;
-  nCallAssociate_ = 0;
-  timeMuonIdProducer_ = 0.0;
-  timeAssociate_ = 0.0;
+  profileInfo_.nCallMuonIdProducer = 0;
+  profileInfo_.nInnerTrack = 0;
+  profileInfo_.nGoodInnerTrack = 0;
+  profileInfo_.nCallFillMuonIdTrackerMuon = 0;
+  profileInfo_.nCallFillMuonIdStandAloneMuon = 0;
+  profileInfo_.nCallAssociate = 0;
+  profileInfo_.timeMuonIdProducer = 0.0;
+  profileInfo_.timeAssociate = 0.0;
   
-  ++nCallMuonIdProducer_;
+  ++profileInfo_.nCallMuonIdProducer;
 
   auto outputMuons = std::make_unique<reco::MuonCollection>();
   auto caloMuons = std::make_unique<reco::CaloMuonCollection>();
@@ -593,9 +619,37 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       geometry = &iSetup.getData(globalGeomToken_);
     }
 
+    for (const auto &hit : *rpcHitHandle_) {
+        muonHitSegInfo_.rpcRecHitRawId.push_back(hit.geographicalId());
+    }
+    for (const auto &hit : *gemHitHandle_) {
+        muonHitSegInfo_.gemRecHitRawId.push_back(hit.geographicalId());
+    }
+    for (const auto &seg : *dtSegmentHandle_) {
+        muonHitSegInfo_.dtSegmentRawId.push_back(seg.geographicalId());
+    }
+    for (const auto &seg : *cscSegmentHandle_) {
+        muonHitSegInfo_.cscSegmentRawId.push_back(seg.geographicalId());
+    }
+    for (const auto &seg : *gemSegmentHandle_) {
+        muonHitSegInfo_.gemSegmentRawId.push_back(seg.geographicalId());
+    }
+    muonHitSegTree_->Fill();
+
+    trackerMuonInfo_.trackPt.clear();
+    trackerMuonInfo_.trackP.clear();
+    trackerMuonInfo_.trackEta.clear();
+    trackerMuonInfo_.trackPhi.clear();
+
+    trackerMuonInfo_.isGoodTrackerMuon.clear();
+    trackerMuonInfo_.isGoodRPCMuon.clear();
+    trackerMuonInfo_.isGoodGEMMuon.clear();
+    trackerMuonInfo_.isGoodME0Muon.clear();
+    trackerMuonInfo_.isOutputMuon.clear();
     for (unsigned int i = 0; i < innerTrackCollectionHandle_->size(); ++i) {
-      ++nInnerTrack_;
+      ++profileInfo_.nInnerTrack;
       const reco::Track& track = innerTrackCollectionHandle_->at(i);
+
       if (!isGoodTrack(track))
         continue;
       if (selectHighPurity_ && !track.quality(reco::TrackBase::highPurity)) {
@@ -603,16 +657,20 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
         if (!(*recoVertices)[0].isFake())
           continue;
       }
-      ++nGoodInnerTrack_;
+      ++profileInfo_.nGoodInnerTrack;
       const auto& trackRef = reco::TrackRef(innerTrackCollectionHandle_, i);
       bool splitTrack = false;
       if (track.extra().isAvailable() && TrackDetectorAssociator::crossedIP(track))
         splitTrack = true;
       const auto& directions = splitTrack ? directions1 : directions2;
       for (const auto direction : directions) {
+        trackerMuonInfo_.trackPt.push_back(track.pt()); 
+        trackerMuonInfo_.trackP.push_back(track.p());
+        trackerMuonInfo_.trackEta.push_back(track.eta());
+        trackerMuonInfo_.trackPhi.push_back(track.phi());
         // make muon
         reco::Muon trackerMuon(makeMuon(iEvent, iSetup, trackRef, reco::Muon::InnerTrack));
-        ++nCallFillMuonIdTrackerMuon_;
+        ++profileInfo_.nCallFillMuonIdTrackerMuon;
         fillMuonId(iEvent, iSetup, trackerMuon, direction);
 
         if (debugWithTruthMatching_) {
@@ -670,8 +728,14 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
               caloMuons->push_back(caloMuon);
           }
         }
+        trackerMuonInfo_.isGoodTrackerMuon.push_back(goodTrackerMuon);
+        trackerMuonInfo_.isGoodRPCMuon.push_back(goodRPCMuon);
+        trackerMuonInfo_.isGoodGEMMuon.push_back(goodGEMMuon);
+        trackerMuonInfo_.isGoodME0Muon.push_back(goodME0Muon);
+        trackerMuonInfo_.isOutputMuon.push_back(goodTrackerMuon || goodRPCMuon || goodGEMMuon || goodME0Muon);
       }
     }
+    trackerMuonTree_->Fill();
   }
 
   // and at last the stand alone muons
@@ -752,15 +816,15 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       // if it's available
       if (muon.isStandAloneMuon()) {
         if (std::abs(reco::deltaPhi(phiOfMuonInteractionRegion(muon), muon.phi())) < M_PI_2) {
-          ++nCallFillMuonIdStandAloneMuon_;
+          ++profileInfo_.nCallFillMuonIdStandAloneMuon;
           fillMuonId(iEvent, iSetup, muon, TrackDetectorAssociator::InsideOut);
         } else {
-          ++nCallFillMuonIdStandAloneMuon_;
+          ++profileInfo_.nCallFillMuonIdStandAloneMuon;
           fillMuonId(iEvent, iSetup, muon, TrackDetectorAssociator::OutsideIn);
         }
       } else {
         LogTrace("MuonIdentification") << "THIS SHOULD NEVER HAPPEN";
-        ++nCallFillMuonIdStandAloneMuon_;
+        ++profileInfo_.nCallFillMuonIdStandAloneMuon;
         fillMuonId(iEvent, iSetup, muon);
       }
     }
@@ -839,8 +903,8 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   iEvent.put(std::move(caloMuons));
 
   auto end = std::chrono::high_resolution_clock::now();
-  timeMuonIdProducer_ = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-  trackerMuonTree_->Fill();
+  profileInfo_.timeMuonIdProducer = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+  profileTree_->Fill();
 }
 
 bool MuonIdProducer::isGoodTrackerMuon(const reco::Muon& muon) {
@@ -906,11 +970,11 @@ void MuonIdProducer::fillMuonId(edm::Event& iEvent,
   else
     throw cms::Exception("FatalError")
         << "Failed to fill muon id information for a muon with undefined references to tracks";
-  ++nCallAssociate_;
+  ++profileInfo_.nCallAssociate;
   auto start = std::chrono::high_resolution_clock::now();
   TrackDetMatchInfo info = trackAssociator_.associate(iEvent, iSetup, *track, parameters_, direction);
   auto end = std::chrono::high_resolution_clock::now();
-  timeAssociate_ += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+  profileInfo_.timeAssociate += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
 
   LogTrace("MuonIdentification") << "RecoMuon/MuonIdProducer :: fillMuonId :: fillEnergy = " << fillEnergy_;
 
@@ -1355,7 +1419,7 @@ void MuonIdProducer::fillArbitrationInfo(reco::MuonCollection* pOutputMuons, uns
     // station segment sort
     for (int stationIndex = 1; stationIndex < 5; ++stationIndex) {
       for (int detectorIndex = 1; detectorIndex <= 5;
-           ++detectorIndex)  // 1-5, as in DataFormats/MuonDetId/interface/MuonSubdetId.h
+           ++detectorIndex)  // 1-5, as in DataFormats/MuonHitSegId/interface/MuonSubdetId.h
       {
         stationPairs.clear();
 

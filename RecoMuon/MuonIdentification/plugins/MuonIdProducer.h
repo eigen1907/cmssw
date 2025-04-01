@@ -62,6 +62,16 @@
 #include "RecoMuon/MuonIdentification/interface/MuonArbitrationMethods.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 
+
+#include "DataFormats/DTRecHit/interface/DTRecSegment4DCollection.h"
+#include "DataFormats/DTRecHit/interface/DTRecSegment2D.h"
+#include "DataFormats/CSCRecHit/interface/CSCSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0RecHitCollection.h"
+
 #include "TTree.h"
 #include <chrono> 
 
@@ -249,10 +259,16 @@ private:
   edm::EDGetTokenT<reco::TrackToTrackMap> dytCollectionToken_;
   edm::EDGetTokenT<reco::VertexCollection> pvToken_;
 
+  edm::EDGetTokenT<DTRecSegment4DCollection> dtSegmentToken_;
+  edm::EDGetTokenT<CSCSegmentCollection> cscSegmentToken_;
+  edm::EDGetTokenT<GEMSegmentCollection> gemSegmentToken_;
   edm::EDGetTokenT<RPCRecHitCollection> rpcHitToken_;
   edm::EDGetTokenT<GEMRecHitCollection> gemHitToken_;
   edm::EDGetTokenT<edm::ValueMap<reco::MuonQuality> > glbQualToken_;
 
+  edm::Handle<DTRecSegment4DCollection> dtSegmentHandle_;
+  edm::Handle<CSCSegmentCollection> cscSegmentHandle_;
+  edm::Handle<GEMSegmentCollection> gemSegmentHandle_;
   edm::Handle<RPCRecHitCollection> rpcHitHandle_;
   edm::Handle<GEMRecHitCollection> gemHitHandle_;
   edm::Handle<edm::ValueMap<reco::MuonQuality> > glbQualHandle_;
@@ -285,14 +301,46 @@ private:
   bool arbClean_;
   std::unique_ptr<MuonMesh> meshAlgo_;
 
+  struct ProfileInfo {
+    int nCallMuonIdProducer;
+    int nInnerTrack;
+    int nGoodInnerTrack;
+    int nCallFillMuonIdTrackerMuon;
+    int nCallFillMuonIdStandAloneMuon;
+    int nCallAssociate;
+    double timeMuonIdProducer;
+    double timeAssociate;
+  };
+
+  TTree* profileTree_;
+  ProfileInfo profileInfo_;
+
+  struct TrackerMuonInfo {
+    std::vector<double> trackPt;
+    std::vector<double> trackP;
+    std::vector<double> trackEta;
+    std::vector<double> trackPhi;
+
+    std::vector<bool>   isGoodTrackerMuon;
+    std::vector<bool>   isGoodRPCMuon;
+    std::vector<bool>   isGoodGEMMuon;
+    std::vector<bool>   isGoodME0Muon;
+    std::vector<bool>   isOutputMuon;
+  };
+
   TTree* trackerMuonTree_;
-  int nCallMuonIdProducer_;
-  int nInnerTrack_;
-  int nGoodInnerTrack_;
-  int nCallFillMuonIdTrackerMuon_;
-  int nCallFillMuonIdStandAloneMuon_;
-  int nCallAssociate_;
-  double timeMuonIdProducer_;
-  double timeAssociate_;
+  TrackerMuonInfo trackerMuonInfo_;
+  
+  struct MuonHitSegInfo {
+    std::vector<unsigned int> rpcRecHitRawId;
+    std::vector<unsigned int> gemRecHitRawId;
+    
+    std::vector<unsigned int> dtSegmentRawId;
+    std::vector<unsigned int> cscSegmentRawId;
+    std::vector<unsigned int> gemSegmentRawId;
+  };
+
+  TTree* muonHitSegTree_;
+  MuonHitSegInfo muonHitSegInfo_;
 };
 #endif
