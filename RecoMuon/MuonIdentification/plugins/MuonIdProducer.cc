@@ -37,7 +37,11 @@
 
 MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
     : geomTokenRun_(esConsumes<edm::Transition::BeginRun>()),
-      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))) {
+      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))),
+      rpcGeomToken_(esConsumes<RPCGeometry, MuonGeometryRecord>()),
+      cscGeomToken_(esConsumes<CSCGeometry, MuonGeometryRecord>()),
+      dtGeomToken_(esConsumes<DTGeometry, MuonGeometryRecord>()),
+      gemGeomToken_(esConsumes<GEMGeometry, MuonGeometryRecord>()) {
   LogTrace("MuonIdentification") << "RecoMuon/MuonIdProducer :: Constructor called";
 
   produces<reco::MuonCollection>();
@@ -236,12 +240,45 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
   trackerMuonTree_->Branch("isOutputMuon",      &trackerMuonInfo_.isOutputMuon);
 
   muonHitSegTree_ = fs->make<TTree>("muonHitSegTree", "Muon Detector Information");
+
+  // --- RPC Rechit Branches ---
   muonHitSegTree_->Branch("rpcRecHitRawId",  &muonHitSegInfo_.rpcRecHitRawId);
+  muonHitSegTree_->Branch("rpcRecHitPosX",   &muonHitSegInfo_.rpcRecHitPosX);
+  muonHitSegTree_->Branch("rpcRecHitPosY",   &muonHitSegInfo_.rpcRecHitPosY);
+  muonHitSegTree_->Branch("rpcRecHitPosZ",   &muonHitSegInfo_.rpcRecHitPosZ);
+
+  // --- GEM Rechit Branches ---
   muonHitSegTree_->Branch("gemRecHitRawId",  &muonHitSegInfo_.gemRecHitRawId);
-  
+  muonHitSegTree_->Branch("gemRecHitPosX",   &muonHitSegInfo_.gemRecHitPosX);
+  muonHitSegTree_->Branch("gemRecHitPosY",   &muonHitSegInfo_.gemRecHitPosY);
+  muonHitSegTree_->Branch("gemRecHitPosZ",   &muonHitSegInfo_.gemRecHitPosZ);
+
+  // --- DT Segment Branches ---
   muonHitSegTree_->Branch("dtSegmentRawId",  &muonHitSegInfo_.dtSegmentRawId);
+  muonHitSegTree_->Branch("dtSegmentPosX",   &muonHitSegInfo_.dtSegmentPosX);
+  muonHitSegTree_->Branch("dtSegmentPosY",   &muonHitSegInfo_.dtSegmentPosY);
+  muonHitSegTree_->Branch("dtSegmentPosZ",   &muonHitSegInfo_.dtSegmentPosZ);
+  muonHitSegTree_->Branch("dtSegmentDirX",   &muonHitSegInfo_.dtSegmentDirX);
+  muonHitSegTree_->Branch("dtSegmentDirY",   &muonHitSegInfo_.dtSegmentDirY);
+  muonHitSegTree_->Branch("dtSegmentDirZ",   &muonHitSegInfo_.dtSegmentDirZ);
+
+  // --- CSC Segment Branches ---
   muonHitSegTree_->Branch("cscSegmentRawId", &muonHitSegInfo_.cscSegmentRawId);
+  muonHitSegTree_->Branch("cscSegmentPosX",  &muonHitSegInfo_.cscSegmentPosX);
+  muonHitSegTree_->Branch("cscSegmentPosY",  &muonHitSegInfo_.cscSegmentPosY);
+  muonHitSegTree_->Branch("cscSegmentPosZ",  &muonHitSegInfo_.cscSegmentPosZ);
+  muonHitSegTree_->Branch("cscSegmentDirX",  &muonHitSegInfo_.cscSegmentDirX);
+  muonHitSegTree_->Branch("cscSegmentDirY",  &muonHitSegInfo_.cscSegmentDirY);
+  muonHitSegTree_->Branch("cscSegmentDirZ",  &muonHitSegInfo_.cscSegmentDirZ);
+
+  // --- GEM Segment Branches ---
   muonHitSegTree_->Branch("gemSegmentRawId", &muonHitSegInfo_.gemSegmentRawId);
+  muonHitSegTree_->Branch("gemSegmentPosX",  &muonHitSegInfo_.gemSegmentPosX);
+  muonHitSegTree_->Branch("gemSegmentPosY",  &muonHitSegInfo_.gemSegmentPosY);
+  muonHitSegTree_->Branch("gemSegmentPosZ",  &muonHitSegInfo_.gemSegmentPosZ);
+  muonHitSegTree_->Branch("gemSegmentDirX",  &muonHitSegInfo_.gemSegmentDirX);
+  muonHitSegTree_->Branch("gemSegmentDirY",  &muonHitSegInfo_.gemSegmentDirY);
+  muonHitSegTree_->Branch("gemSegmentDirZ",  &muonHitSegInfo_.gemSegmentDirZ);
 }
 
 
@@ -619,20 +656,115 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       geometry = &iSetup.getData(globalGeomToken_);
     }
 
+    const RPCGeometry* rpcGeo = &iSetup.getData(rpcGeomToken_);
+    const CSCGeometry* cscGeo = &iSetup.getData(cscGeomToken_);
+    const DTGeometry*  dtGeo  = &iSetup.getData(dtGeomToken_);
+    const GEMGeometry* gemGeo = &iSetup.getData(gemGeomToken_);
+    
+    muonHitSegInfo_.rpcRecHitRawId.clear();
+    muonHitSegInfo_.rpcRecHitPosX.clear();
+    muonHitSegInfo_.rpcRecHitPosY.clear();
+    muonHitSegInfo_.rpcRecHitPosZ.clear();
+    
+    muonHitSegInfo_.gemRecHitRawId.clear();
+    muonHitSegInfo_.gemRecHitPosX.clear();
+    muonHitSegInfo_.gemRecHitPosY.clear();
+    muonHitSegInfo_.gemRecHitPosZ.clear();
+    
+    muonHitSegInfo_.dtSegmentRawId.clear();
+    muonHitSegInfo_.dtSegmentPosX.clear();
+    muonHitSegInfo_.dtSegmentPosY.clear();
+    muonHitSegInfo_.dtSegmentPosZ.clear();
+    muonHitSegInfo_.dtSegmentDirX.clear();
+    muonHitSegInfo_.dtSegmentDirY.clear();
+    muonHitSegInfo_.dtSegmentDirZ.clear();
+    
+    muonHitSegInfo_.cscSegmentRawId.clear();
+    muonHitSegInfo_.cscSegmentPosX.clear();
+    muonHitSegInfo_.cscSegmentPosY.clear();
+    muonHitSegInfo_.cscSegmentPosZ.clear();
+    muonHitSegInfo_.cscSegmentDirX.clear();
+    muonHitSegInfo_.cscSegmentDirY.clear();
+    muonHitSegInfo_.cscSegmentDirZ.clear();
+    
+    muonHitSegInfo_.gemSegmentRawId.clear();
+    muonHitSegInfo_.gemSegmentPosX.clear();
+    muonHitSegInfo_.gemSegmentPosY.clear();
+    muonHitSegInfo_.gemSegmentPosZ.clear();
+    muonHitSegInfo_.gemSegmentDirX.clear();
+    muonHitSegInfo_.gemSegmentDirY.clear();
+    muonHitSegInfo_.gemSegmentDirZ.clear();
+
     for (const auto &hit : *rpcHitHandle_) {
+      RPCDetId rpcId(hit.geographicalId());
+      const auto rpcDet = rpcGeo->idToDet(rpcId);
+      if (rpcDet) {
+        GlobalPoint globalPos = rpcDet->surface().toGlobal(hit.localPosition());
         muonHitSegInfo_.rpcRecHitRawId.push_back(hit.geographicalId());
+        muonHitSegInfo_.rpcRecHitPosX.push_back(globalPos.x());
+        muonHitSegInfo_.rpcRecHitPosY.push_back(globalPos.y());
+        muonHitSegInfo_.rpcRecHitPosZ.push_back(globalPos.z());
+      }
     }
+
     for (const auto &hit : *gemHitHandle_) {
+      GEMDetId gemId(hit.geographicalId());
+      const auto gemDet = gemGeo->idToDet(gemId);
+      if (gemDet) {
+        GlobalPoint globalPos = gemDet->surface().toGlobal(hit.localPosition());
         muonHitSegInfo_.gemRecHitRawId.push_back(hit.geographicalId());
+        muonHitSegInfo_.gemRecHitPosX.push_back(globalPos.x());
+        muonHitSegInfo_.gemRecHitPosY.push_back(globalPos.y());
+        muonHitSegInfo_.gemRecHitPosZ.push_back(globalPos.z());
+      }
     }
+
     for (const auto &seg : *dtSegmentHandle_) {
+      DTChamberId dtId(seg.geographicalId());
+      const auto dtDet = dtGeo->idToDet(dtId);
+      if (dtDet) {
+        GlobalPoint globalPos = dtDet->surface().toGlobal(seg.localPosition());
+        GlobalVector globalDir = dtDet->surface().toGlobal(seg.localDirection());
         muonHitSegInfo_.dtSegmentRawId.push_back(seg.geographicalId());
+        muonHitSegInfo_.dtSegmentPosX.push_back(globalPos.x());
+        muonHitSegInfo_.dtSegmentPosY.push_back(globalPos.y());
+        muonHitSegInfo_.dtSegmentPosZ.push_back(globalPos.z());
+        muonHitSegInfo_.dtSegmentDirX.push_back(globalDir.x());
+        muonHitSegInfo_.dtSegmentDirY.push_back(globalDir.y());
+        muonHitSegInfo_.dtSegmentDirZ.push_back(globalDir.z());
+      }
     }
+
     for (const auto &seg : *cscSegmentHandle_) {
+      CSCDetId cscId(seg.geographicalId());
+      const auto cscDet = cscGeo->idToDet(cscId);
+      if (cscDet) {
+        GlobalPoint globalPos = cscDet->surface().toGlobal(seg.localPosition());
+        GlobalVector globalDir = cscDet->surface().toGlobal(seg.localDirection());
         muonHitSegInfo_.cscSegmentRawId.push_back(seg.geographicalId());
+        muonHitSegInfo_.cscSegmentPosX.push_back(globalPos.x());
+        muonHitSegInfo_.cscSegmentPosY.push_back(globalPos.y());
+        muonHitSegInfo_.cscSegmentPosZ.push_back(globalPos.z());
+        muonHitSegInfo_.cscSegmentDirX.push_back(globalDir.x());
+        muonHitSegInfo_.cscSegmentDirY.push_back(globalDir.y());
+        muonHitSegInfo_.cscSegmentDirZ.push_back(globalDir.z());
+      }
     }
+
     for (const auto &seg : *gemSegmentHandle_) {
+      GEMDetId gemId(seg.geographicalId());
+      const auto gemDet = gemGeo->idToDet(gemId);
+      if (gemDet) {
+        GlobalPoint globalPos = gemDet->surface().toGlobal(seg.localPosition());
+        GlobalVector globalDir = gemDet->surface().toGlobal(seg.localDirection());
         muonHitSegInfo_.gemSegmentRawId.push_back(seg.geographicalId());
+        muonHitSegInfo_.gemSegmentPosX.push_back(globalPos.x());
+        muonHitSegInfo_.gemSegmentPosY.push_back(globalPos.y());
+        muonHitSegInfo_.gemSegmentPosZ.push_back(globalPos.z());
+        muonHitSegInfo_.gemSegmentDirX.push_back(globalDir.x());
+        muonHitSegInfo_.gemSegmentDirY.push_back(globalDir.y());
+        muonHitSegInfo_.gemSegmentDirZ.push_back(globalDir.z());
+      }
     }
     muonHitSegTree_->Fill();
 
