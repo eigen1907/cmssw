@@ -217,68 +217,50 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
   }
 
   edm::Service<TFileService> fs;
-  profileTree_ = fs->make<TTree>("profileTree", "Profile Information");
-  profileTree_->Branch("nCallMuonIdProducer",           &profileInfo_.nCallMuonIdProducer, "nCallMuonIdProducer/I");
-  profileTree_->Branch("nInnerTrack",                   &profileInfo_.nInnerTrack, "nInnerTrack/I");
-  profileTree_->Branch("nGoodInnerTrack",               &profileInfo_.nGoodInnerTrack, "nGoodInnerTrack/I");
-  profileTree_->Branch("nCallFillMuonIdTrackerMuon",    &profileInfo_.nCallFillMuonIdTrackerMuon, "nCallFillMuonIdTrackerMuon/I");
-  profileTree_->Branch("nCallFillMuonIdStandAloneMuon", &profileInfo_.nCallFillMuonIdStandAloneMuon, "nCallFillMuonIdStandAloneMuon/I");
-  profileTree_->Branch("nCallAssociate",                &profileInfo_.nCallAssociate, "nCallAssociate/I");
-  profileTree_->Branch("timeMuonIdProducer",            &profileInfo_.timeMuonIdProducer, "timeMuonIdProducer/D");
-  profileTree_->Branch("timeAssociate",                 &profileInfo_.timeAssociate, "timeAssociate/D");
 
-  trackerMuonTree_ = fs->make<TTree>("trackerMuonTree", "Track-Muon Information");
-  trackerMuonTree_->Branch("trackPt",           &trackerMuonInfo_.trackPt);
-  trackerMuonTree_->Branch("trackP",            &trackerMuonInfo_.trackP);
-  trackerMuonTree_->Branch("trackEta",          &trackerMuonInfo_.trackEta);
-  trackerMuonTree_->Branch("trackPhi",          &trackerMuonInfo_.trackPhi);
+  eventTree_ = fs->make<TTree>("event", "Event Tree");
+  eventTree_->Branch("track_pt",           &trackerMuonInfo_.trackPt);
+  eventTree_->Branch("track_p",            &trackerMuonInfo_.trackP);
+  eventTree_->Branch("track_eta",          &trackerMuonInfo_.trackEta);
+  eventTree_->Branch("track_phi",          &trackerMuonInfo_.trackPhi);
 
-  trackerMuonTree_->Branch("isGoodTrackerMuon", &trackerMuonInfo_.isGoodTrackerMuon);
-  trackerMuonTree_->Branch("isGoodRPCMuon",     &trackerMuonInfo_.isGoodRPCMuon);
-  trackerMuonTree_->Branch("isGoodGEMMuon",     &trackerMuonInfo_.isGoodGEMMuon);
-  trackerMuonTree_->Branch("isGoodME0Muon",     &trackerMuonInfo_.isGoodME0Muon);
-  trackerMuonTree_->Branch("isOutputMuon",      &trackerMuonInfo_.isOutputMuon);
+  eventTree_->Branch("is_trackermuon", &trackerMuonInfo_.isGoodTrackerMuon);
+  eventTree_->Branch("is_rpcmuon",     &trackerMuonInfo_.isGoodRPCMuon);
+  eventTree_->Branch("is_gemmuon",     &trackerMuonInfo_.isGoodGEMMuon);
 
-  muonHitSegTree_ = fs->make<TTree>("muonHitSegTree", "Muon Detector Information");
-
-  // --- RPC Rechit Branches ---
-  muonHitSegTree_->Branch("rpcRecHitRawId",  &muonHitSegInfo_.rpcRecHitRawId);
-  muonHitSegTree_->Branch("rpcRecHitPosX",   &muonHitSegInfo_.rpcRecHitPosX);
-  muonHitSegTree_->Branch("rpcRecHitPosY",   &muonHitSegInfo_.rpcRecHitPosY);
-  muonHitSegTree_->Branch("rpcRecHitPosZ",   &muonHitSegInfo_.rpcRecHitPosZ);
-
-  // --- GEM Rechit Branches ---
-  muonHitSegTree_->Branch("gemRecHitRawId",  &muonHitSegInfo_.gemRecHitRawId);
-  muonHitSegTree_->Branch("gemRecHitPosX",   &muonHitSegInfo_.gemRecHitPosX);
-  muonHitSegTree_->Branch("gemRecHitPosY",   &muonHitSegInfo_.gemRecHitPosY);
-  muonHitSegTree_->Branch("gemRecHitPosZ",   &muonHitSegInfo_.gemRecHitPosZ);
-
-  // --- DT Segment Branches ---
-  muonHitSegTree_->Branch("dtSegmentRawId",  &muonHitSegInfo_.dtSegmentRawId);
-  muonHitSegTree_->Branch("dtSegmentPosX",   &muonHitSegInfo_.dtSegmentPosX);
-  muonHitSegTree_->Branch("dtSegmentPosY",   &muonHitSegInfo_.dtSegmentPosY);
-  muonHitSegTree_->Branch("dtSegmentPosZ",   &muonHitSegInfo_.dtSegmentPosZ);
-  muonHitSegTree_->Branch("dtSegmentDirX",   &muonHitSegInfo_.dtSegmentDirX);
-  muonHitSegTree_->Branch("dtSegmentDirY",   &muonHitSegInfo_.dtSegmentDirY);
-  muonHitSegTree_->Branch("dtSegmentDirZ",   &muonHitSegInfo_.dtSegmentDirZ);
-
-  // --- CSC Segment Branches ---
-  muonHitSegTree_->Branch("cscSegmentRawId", &muonHitSegInfo_.cscSegmentRawId);
-  muonHitSegTree_->Branch("cscSegmentPosX",  &muonHitSegInfo_.cscSegmentPosX);
-  muonHitSegTree_->Branch("cscSegmentPosY",  &muonHitSegInfo_.cscSegmentPosY);
-  muonHitSegTree_->Branch("cscSegmentPosZ",  &muonHitSegInfo_.cscSegmentPosZ);
-  muonHitSegTree_->Branch("cscSegmentDirX",  &muonHitSegInfo_.cscSegmentDirX);
-  muonHitSegTree_->Branch("cscSegmentDirY",  &muonHitSegInfo_.cscSegmentDirY);
-  muonHitSegTree_->Branch("cscSegmentDirZ",  &muonHitSegInfo_.cscSegmentDirZ);
-
-  // --- GEM Segment Branches ---
-  muonHitSegTree_->Branch("gemSegmentRawId", &muonHitSegInfo_.gemSegmentRawId);
-  muonHitSegTree_->Branch("gemSegmentPosX",  &muonHitSegInfo_.gemSegmentPosX);
-  muonHitSegTree_->Branch("gemSegmentPosY",  &muonHitSegInfo_.gemSegmentPosY);
-  muonHitSegTree_->Branch("gemSegmentPosZ",  &muonHitSegInfo_.gemSegmentPosZ);
-  muonHitSegTree_->Branch("gemSegmentDirX",  &muonHitSegInfo_.gemSegmentDirX);
-  muonHitSegTree_->Branch("gemSegmentDirY",  &muonHitSegInfo_.gemSegmentDirY);
-  muonHitSegTree_->Branch("gemSegmentDirZ",  &muonHitSegInfo_.gemSegmentDirZ);
+  eventTree_->Branch("rpc_rechit_rawid",  &muonHitSegInfo_.rpcRecHitRawId);
+  eventTree_->Branch("rpc_rechit_position_x",   &muonHitSegInfo_.rpcRecHitPosX);
+  eventTree_->Branch("rpc_rechit_position_y",   &muonHitSegInfo_.rpcRecHitPosY);
+  eventTree_->Branch("rpc_rechit_position_z",   &muonHitSegInfo_.rpcRecHitPosZ);
+  
+  eventTree_->Branch("gem_rechit_rawid",  &muonHitSegInfo_.gemRecHitRawId);
+  eventTree_->Branch("gem_rechit_position_x",   &muonHitSegInfo_.gemRecHitPosX);
+  eventTree_->Branch("gem_rechit_position_y",   &muonHitSegInfo_.gemRecHitPosY);
+  eventTree_->Branch("gem_rechit_position_z",   &muonHitSegInfo_.gemRecHitPosZ);
+  
+  eventTree_->Branch("dt_segment_rawid",  &muonHitSegInfo_.dtSegmentRawId);
+  eventTree_->Branch("dt_segment_position_x",   &muonHitSegInfo_.dtSegmentPosX);
+  eventTree_->Branch("dt_segment_position_y",   &muonHitSegInfo_.dtSegmentPosY);
+  eventTree_->Branch("dt_segment_position_z",   &muonHitSegInfo_.dtSegmentPosZ);
+  eventTree_->Branch("dt_segment_direction_x",   &muonHitSegInfo_.dtSegmentDirX);
+  eventTree_->Branch("dt_segment_direction_y",   &muonHitSegInfo_.dtSegmentDirY);
+  eventTree_->Branch("dt_segment_direction_z",   &muonHitSegInfo_.dtSegmentDirZ);
+  
+  eventTree_->Branch("csc_segment_rawid", &muonHitSegInfo_.cscSegmentRawId);
+  eventTree_->Branch("csc_segment_position_x",  &muonHitSegInfo_.cscSegmentPosX);
+  eventTree_->Branch("csc_segment_position_y",  &muonHitSegInfo_.cscSegmentPosY);
+  eventTree_->Branch("csc_segment_position_z",  &muonHitSegInfo_.cscSegmentPosZ);
+  eventTree_->Branch("csc_segment_direction_x",  &muonHitSegInfo_.cscSegmentDirX);
+  eventTree_->Branch("csc_segment_direction_y",  &muonHitSegInfo_.cscSegmentDirY);
+  eventTree_->Branch("csc_segment_direction_z",  &muonHitSegInfo_.cscSegmentDirZ);
+  
+  eventTree_->Branch("gem_segment_rawid", &muonHitSegInfo_.gemSegmentRawId);
+  eventTree_->Branch("gem_segment_position_x",  &muonHitSegInfo_.gemSegmentPosX);
+  eventTree_->Branch("gem_segment_position_y",  &muonHitSegInfo_.gemSegmentPosY);
+  eventTree_->Branch("gem_segment_position_z",  &muonHitSegInfo_.gemSegmentPosZ);
+  eventTree_->Branch("gem_segment_direction_x",  &muonHitSegInfo_.gemSegmentDirX);
+  eventTree_->Branch("gem_segment_direction_y",  &muonHitSegInfo_.gemSegmentDirY);
+  eventTree_->Branch("gem_segment_direction_z",  &muonHitSegInfo_.gemSegmentDirZ);
 }
 
 
@@ -544,18 +526,6 @@ bool validateGlobalMuonPair(const reco::MuonTrackLinks& goodMuon, const reco::Mu
 }
 
 void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  auto start = std::chrono::high_resolution_clock::now();
-  profileInfo_.nCallMuonIdProducer = 0;
-  profileInfo_.nInnerTrack = 0;
-  profileInfo_.nGoodInnerTrack = 0;
-  profileInfo_.nCallFillMuonIdTrackerMuon = 0;
-  profileInfo_.nCallFillMuonIdStandAloneMuon = 0;
-  profileInfo_.nCallAssociate = 0;
-  profileInfo_.timeMuonIdProducer = 0.0;
-  profileInfo_.timeAssociate = 0.0;
-  
-  ++profileInfo_.nCallMuonIdProducer;
-
   auto outputMuons = std::make_unique<reco::MuonCollection>();
   auto caloMuons = std::make_unique<reco::CaloMuonCollection>();
 
@@ -695,79 +665,6 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     muonHitSegInfo_.gemSegmentDirY.clear();
     muonHitSegInfo_.gemSegmentDirZ.clear();
 
-    for (const auto &hit : *rpcHitHandle_) {
-      RPCDetId rpcId(hit.geographicalId());
-      const auto rpcDet = rpcGeo->idToDet(rpcId);
-      if (rpcDet) {
-        GlobalPoint globalPos = rpcDet->surface().toGlobal(hit.localPosition());
-        muonHitSegInfo_.rpcRecHitRawId.push_back(hit.geographicalId());
-        muonHitSegInfo_.rpcRecHitPosX.push_back(globalPos.x());
-        muonHitSegInfo_.rpcRecHitPosY.push_back(globalPos.y());
-        muonHitSegInfo_.rpcRecHitPosZ.push_back(globalPos.z());
-      }
-    }
-
-    for (const auto &hit : *gemHitHandle_) {
-      GEMDetId gemId(hit.geographicalId());
-      const auto gemDet = gemGeo->idToDet(gemId);
-      if (gemDet) {
-        GlobalPoint globalPos = gemDet->surface().toGlobal(hit.localPosition());
-        muonHitSegInfo_.gemRecHitRawId.push_back(hit.geographicalId());
-        muonHitSegInfo_.gemRecHitPosX.push_back(globalPos.x());
-        muonHitSegInfo_.gemRecHitPosY.push_back(globalPos.y());
-        muonHitSegInfo_.gemRecHitPosZ.push_back(globalPos.z());
-      }
-    }
-
-    for (const auto &seg : *dtSegmentHandle_) {
-      DTChamberId dtId(seg.geographicalId());
-      const auto dtDet = dtGeo->idToDet(dtId);
-      if (dtDet) {
-        GlobalPoint globalPos = dtDet->surface().toGlobal(seg.localPosition());
-        GlobalVector globalDir = dtDet->surface().toGlobal(seg.localDirection());
-        muonHitSegInfo_.dtSegmentRawId.push_back(seg.geographicalId());
-        muonHitSegInfo_.dtSegmentPosX.push_back(globalPos.x());
-        muonHitSegInfo_.dtSegmentPosY.push_back(globalPos.y());
-        muonHitSegInfo_.dtSegmentPosZ.push_back(globalPos.z());
-        muonHitSegInfo_.dtSegmentDirX.push_back(globalDir.x());
-        muonHitSegInfo_.dtSegmentDirY.push_back(globalDir.y());
-        muonHitSegInfo_.dtSegmentDirZ.push_back(globalDir.z());
-      }
-    }
-
-    for (const auto &seg : *cscSegmentHandle_) {
-      CSCDetId cscId(seg.geographicalId());
-      const auto cscDet = cscGeo->idToDet(cscId);
-      if (cscDet) {
-        GlobalPoint globalPos = cscDet->surface().toGlobal(seg.localPosition());
-        GlobalVector globalDir = cscDet->surface().toGlobal(seg.localDirection());
-        muonHitSegInfo_.cscSegmentRawId.push_back(seg.geographicalId());
-        muonHitSegInfo_.cscSegmentPosX.push_back(globalPos.x());
-        muonHitSegInfo_.cscSegmentPosY.push_back(globalPos.y());
-        muonHitSegInfo_.cscSegmentPosZ.push_back(globalPos.z());
-        muonHitSegInfo_.cscSegmentDirX.push_back(globalDir.x());
-        muonHitSegInfo_.cscSegmentDirY.push_back(globalDir.y());
-        muonHitSegInfo_.cscSegmentDirZ.push_back(globalDir.z());
-      }
-    }
-
-    for (const auto &seg : *gemSegmentHandle_) {
-      GEMDetId gemId(seg.geographicalId());
-      const auto gemDet = gemGeo->idToDet(gemId);
-      if (gemDet) {
-        GlobalPoint globalPos = gemDet->surface().toGlobal(seg.localPosition());
-        GlobalVector globalDir = gemDet->surface().toGlobal(seg.localDirection());
-        muonHitSegInfo_.gemSegmentRawId.push_back(seg.geographicalId());
-        muonHitSegInfo_.gemSegmentPosX.push_back(globalPos.x());
-        muonHitSegInfo_.gemSegmentPosY.push_back(globalPos.y());
-        muonHitSegInfo_.gemSegmentPosZ.push_back(globalPos.z());
-        muonHitSegInfo_.gemSegmentDirX.push_back(globalDir.x());
-        muonHitSegInfo_.gemSegmentDirY.push_back(globalDir.y());
-        muonHitSegInfo_.gemSegmentDirZ.push_back(globalDir.z());
-      }
-    }
-    muonHitSegTree_->Fill();
-
     trackerMuonInfo_.trackPt.clear();
     trackerMuonInfo_.trackP.clear();
     trackerMuonInfo_.trackEta.clear();
@@ -776,10 +673,70 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     trackerMuonInfo_.isGoodTrackerMuon.clear();
     trackerMuonInfo_.isGoodRPCMuon.clear();
     trackerMuonInfo_.isGoodGEMMuon.clear();
-    trackerMuonInfo_.isGoodME0Muon.clear();
-    trackerMuonInfo_.isOutputMuon.clear();
+
+    for (const auto &hit : *rpcHitHandle_) {
+      RPCDetId rpcId(hit.geographicalId());
+      const auto rpcDet = rpcGeo->idToDet(rpcId);
+      GlobalPoint globalPos = rpcDet->surface().toGlobal(hit.localPosition());
+      muonHitSegInfo_.rpcRecHitRawId.push_back(hit.geographicalId());
+      muonHitSegInfo_.rpcRecHitPosX.push_back(globalPos.x());
+      muonHitSegInfo_.rpcRecHitPosY.push_back(globalPos.y());
+      muonHitSegInfo_.rpcRecHitPosZ.push_back(globalPos.z());
+    }
+
+    for (const auto &hit : *gemHitHandle_) {
+      GEMDetId gemId(hit.geographicalId());
+      const auto gemDet = gemGeo->idToDet(gemId);
+      GlobalPoint globalPos = gemDet->surface().toGlobal(hit.localPosition());
+      muonHitSegInfo_.gemRecHitRawId.push_back(hit.geographicalId());
+      muonHitSegInfo_.gemRecHitPosX.push_back(globalPos.x());
+      muonHitSegInfo_.gemRecHitPosY.push_back(globalPos.y());
+      muonHitSegInfo_.gemRecHitPosZ.push_back(globalPos.z());
+    }
+
+    for (const auto &seg : *dtSegmentHandle_) {
+      DTChamberId dtId(seg.geographicalId());
+      const auto dtDet = dtGeo->idToDet(dtId);
+      GlobalPoint globalPos = dtDet->surface().toGlobal(seg.localPosition());
+      GlobalVector globalDir = dtDet->surface().toGlobal(seg.localDirection());
+      muonHitSegInfo_.dtSegmentRawId.push_back(seg.geographicalId());
+      muonHitSegInfo_.dtSegmentPosX.push_back(globalPos.x());
+      muonHitSegInfo_.dtSegmentPosY.push_back(globalPos.y());
+      muonHitSegInfo_.dtSegmentPosZ.push_back(globalPos.z());
+      muonHitSegInfo_.dtSegmentDirX.push_back(globalDir.x());
+      muonHitSegInfo_.dtSegmentDirY.push_back(globalDir.y());
+      muonHitSegInfo_.dtSegmentDirZ.push_back(globalDir.z());
+    }
+
+    for (const auto &seg : *cscSegmentHandle_) {
+      CSCDetId cscId(seg.geographicalId());
+      const auto cscDet = cscGeo->idToDet(cscId);
+      GlobalPoint globalPos = cscDet->surface().toGlobal(seg.localPosition());
+      GlobalVector globalDir = cscDet->surface().toGlobal(seg.localDirection());
+      muonHitSegInfo_.cscSegmentRawId.push_back(seg.geographicalId());
+      muonHitSegInfo_.cscSegmentPosX.push_back(globalPos.x());
+      muonHitSegInfo_.cscSegmentPosY.push_back(globalPos.y());
+      muonHitSegInfo_.cscSegmentPosZ.push_back(globalPos.z());
+      muonHitSegInfo_.cscSegmentDirX.push_back(globalDir.x());
+      muonHitSegInfo_.cscSegmentDirY.push_back(globalDir.y());
+      muonHitSegInfo_.cscSegmentDirZ.push_back(globalDir.z());
+    }
+
+    for (const auto &seg : *gemSegmentHandle_) {
+      GEMDetId gemId(seg.geographicalId());
+      const auto gemDet = gemGeo->idToDet(gemId);
+      GlobalPoint globalPos = gemDet->surface().toGlobal(seg.localPosition());
+      GlobalVector globalDir = gemDet->surface().toGlobal(seg.localDirection());
+      muonHitSegInfo_.gemSegmentRawId.push_back(seg.geographicalId());
+      muonHitSegInfo_.gemSegmentPosX.push_back(globalPos.x());
+      muonHitSegInfo_.gemSegmentPosY.push_back(globalPos.y());
+      muonHitSegInfo_.gemSegmentPosZ.push_back(globalPos.z());
+      muonHitSegInfo_.gemSegmentDirX.push_back(globalDir.x());
+      muonHitSegInfo_.gemSegmentDirY.push_back(globalDir.y());
+      muonHitSegInfo_.gemSegmentDirZ.push_back(globalDir.z());
+    }
+
     for (unsigned int i = 0; i < innerTrackCollectionHandle_->size(); ++i) {
-      ++profileInfo_.nInnerTrack;
       const reco::Track& track = innerTrackCollectionHandle_->at(i);
 
       if (!isGoodTrack(track))
@@ -789,7 +746,6 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
         if (!(*recoVertices)[0].isFake())
           continue;
       }
-      ++profileInfo_.nGoodInnerTrack;
       const auto& trackRef = reco::TrackRef(innerTrackCollectionHandle_, i);
       bool splitTrack = false;
       if (track.extra().isAvailable() && TrackDetectorAssociator::crossedIP(track))
@@ -802,7 +758,6 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
         trackerMuonInfo_.trackPhi.push_back(track.phi());
         // make muon
         reco::Muon trackerMuon(makeMuon(iEvent, iSetup, trackRef, reco::Muon::InnerTrack));
-        ++profileInfo_.nCallFillMuonIdTrackerMuon;
         fillMuonId(iEvent, iSetup, trackerMuon, direction);
 
         if (debugWithTruthMatching_) {
@@ -863,11 +818,9 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
         trackerMuonInfo_.isGoodTrackerMuon.push_back(goodTrackerMuon);
         trackerMuonInfo_.isGoodRPCMuon.push_back(goodRPCMuon);
         trackerMuonInfo_.isGoodGEMMuon.push_back(goodGEMMuon);
-        trackerMuonInfo_.isGoodME0Muon.push_back(goodME0Muon);
-        trackerMuonInfo_.isOutputMuon.push_back(goodTrackerMuon || goodRPCMuon || goodGEMMuon || goodME0Muon);
       }
     }
-    trackerMuonTree_->Fill();
+    eventTree_->Fill();
   }
 
   // and at last the stand alone muons
@@ -948,15 +901,12 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       // if it's available
       if (muon.isStandAloneMuon()) {
         if (std::abs(reco::deltaPhi(phiOfMuonInteractionRegion(muon), muon.phi())) < M_PI_2) {
-          ++profileInfo_.nCallFillMuonIdStandAloneMuon;
           fillMuonId(iEvent, iSetup, muon, TrackDetectorAssociator::InsideOut);
         } else {
-          ++profileInfo_.nCallFillMuonIdStandAloneMuon;
           fillMuonId(iEvent, iSetup, muon, TrackDetectorAssociator::OutsideIn);
         }
       } else {
         LogTrace("MuonIdentification") << "THIS SHOULD NEVER HAPPEN";
-        ++profileInfo_.nCallFillMuonIdStandAloneMuon;
         fillMuonId(iEvent, iSetup, muon);
       }
     }
@@ -1033,10 +983,6 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   }
 
   iEvent.put(std::move(caloMuons));
-
-  auto end = std::chrono::high_resolution_clock::now();
-  profileInfo_.timeMuonIdProducer = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-  profileTree_->Fill();
 }
 
 bool MuonIdProducer::isGoodTrackerMuon(const reco::Muon& muon) {
@@ -1102,12 +1048,8 @@ void MuonIdProducer::fillMuonId(edm::Event& iEvent,
   else
     throw cms::Exception("FatalError")
         << "Failed to fill muon id information for a muon with undefined references to tracks";
-  ++profileInfo_.nCallAssociate;
-  auto start = std::chrono::high_resolution_clock::now();
+  
   TrackDetMatchInfo info = trackAssociator_.associate(iEvent, iSetup, *track, parameters_, direction);
-  auto end = std::chrono::high_resolution_clock::now();
-  profileInfo_.timeAssociate += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-
   LogTrace("MuonIdentification") << "RecoMuon/MuonIdProducer :: fillMuonId :: fillEnergy = " << fillEnergy_;
 
   if (fillEnergy_) {

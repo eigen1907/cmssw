@@ -306,19 +306,6 @@ private:
   bool arbClean_;
   std::unique_ptr<MuonMesh> meshAlgo_;
 
-  struct ProfileInfo {
-    int nCallMuonIdProducer;
-    int nInnerTrack;
-    int nGoodInnerTrack;
-    int nCallFillMuonIdTrackerMuon;
-    int nCallFillMuonIdStandAloneMuon;
-    int nCallAssociate;
-    double timeMuonIdProducer;
-    double timeAssociate;
-  };
-
-  TTree* profileTree_;
-  ProfileInfo profileInfo_;
 
   struct TrackerMuonInfo {
     std::vector<double> trackPt;
@@ -330,11 +317,7 @@ private:
     std::vector<bool>   isGoodRPCMuon;
     std::vector<bool>   isGoodGEMMuon;
     std::vector<bool>   isGoodME0Muon;
-    std::vector<bool>   isOutputMuon;
   };
-
-  TTree* trackerMuonTree_;
-  TrackerMuonInfo trackerMuonInfo_;
   
   struct MuonHitSegInfo {
     std::vector<unsigned int>   rpcRecHitRawId;
@@ -372,7 +355,9 @@ private:
     std::vector<float>          gemSegmentDirZ;
   };
 
-  TTree* muonHitSegTree_;
+  TTree* eventTree_;
+
+  TrackerMuonInfo trackerMuonInfo_;
   MuonHitSegInfo muonHitSegInfo_;
   
   edm::ESGetToken<RPCGeometry, MuonGeometryRecord> rpcGeomToken_;
