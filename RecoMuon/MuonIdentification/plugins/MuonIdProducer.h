@@ -281,5 +281,64 @@ private:
 
   bool arbClean_;
   std::unique_ptr<MuonMesh> meshAlgo_;
+
+
+  struct TrackerMuonInfo {
+    std::vector<double> trackPt;
+    std::vector<double> trackP;
+    std::vector<double> trackEta;
+    std::vector<double> trackPhi;
+
+    std::vector<bool>   isGoodTrackerMuon;
+    std::vector<bool>   isGoodRPCMuon;
+    std::vector<bool>   isGoodGEMMuon;
+    std::vector<bool>   isGoodME0Muon;
+  };
+  
+  struct MuonHitSegInfo {
+    std::vector<unsigned int>   rpcRecHitRawId;
+    std::vector<float>          rpcRecHitPosX;
+    std::vector<float>          rpcRecHitPosY;
+    std::vector<float>          rpcRecHitPosZ;
+
+    std::vector<unsigned int>   gemRecHitRawId;
+    std::vector<float>          gemRecHitPosX;
+    std::vector<float>          gemRecHitPosY;
+    std::vector<float>          gemRecHitPosZ;
+
+    std::vector<unsigned int>   dtSegmentRawId;
+    std::vector<float>          dtSegmentPosX;
+    std::vector<float>          dtSegmentPosY;
+    std::vector<float>          dtSegmentPosZ;
+    std::vector<float>          dtSegmentDirX;
+    std::vector<float>          dtSegmentDirY;
+    std::vector<float>          dtSegmentDirZ;
+
+    std::vector<unsigned int>   cscSegmentRawId;
+    std::vector<float>          cscSegmentPosX;
+    std::vector<float>          cscSegmentPosY;
+    std::vector<float>          cscSegmentPosZ;
+    std::vector<float>          cscSegmentDirX;
+    std::vector<float>          cscSegmentDirY;
+    std::vector<float>          cscSegmentDirZ;
+
+    std::vector<unsigned int>   gemSegmentRawId;
+    std::vector<float>          gemSegmentPosX;
+    std::vector<float>          gemSegmentPosY;
+    std::vector<float>          gemSegmentPosZ;
+    std::vector<float>          gemSegmentDirX;
+    std::vector<float>          gemSegmentDirY;
+    std::vector<float>          gemSegmentDirZ;
+  };
+
+  TTree* eventTree_;
+
+  TrackerMuonInfo trackerMuonInfo_;
+  MuonHitSegInfo muonHitSegInfo_;
+  
+  edm::ESGetToken<RPCGeometry, MuonGeometryRecord> rpcGeomToken_;
+  edm::ESGetToken<CSCGeometry, MuonGeometryRecord> cscGeomToken_;
+  edm::ESGetToken<DTGeometry, MuonGeometryRecord>  dtGeomToken_;
+  edm::ESGetToken<GEMGeometry, MuonGeometryRecord>  gemGeomToken_;
 };
 #endif
