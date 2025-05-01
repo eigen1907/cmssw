@@ -12,6 +12,7 @@
 #include "SimDataFormats/RPCDigiSimLink/interface/RPCDigiSimLink.h"
 #include "SimDataFormats/TrackingHit/interface/PSimHit.h"
 #include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
 
 #include <map>
 #include <set>
@@ -59,6 +60,7 @@ public:
   std::vector<SimHitIdpr> associateRecHit(const TrackingRecHit &hit) const;
   std::set<RPCDigiSimLink> findRPCDigiSimLink(uint32_t rpcDetId, int strip, int bx) const;
   //   const PSimHit* linkToSimHit(RPCDigiSimLink link);
+  int numberOfIRPCHits(const TrackingParticle& tp) const;
 
 private:
   void initEvent(const edm::Event &);

@@ -651,7 +651,7 @@ MuonAssociatorByHitsHelper::IndexAssociation MuonAssociatorByHitsHelper::associa
         //   should reproduce the behaviour of UseGrouped=UseSplitting=.true.
         n_tracker_recounted_simhits = trpart->numberOfTrackerHits();
         //   numberOfHits() gives the total number of hits (tracker + muons)
-        n_muon_simhits = trpart->numberOfHits() - trpart->numberOfTrackerHits();
+        n_muon_simhits = trpart->numberOfHits() - rpctruth.numberOfIRPCHits(*trpart) - trpart->numberOfTrackerHits();
 
         // Handle the case of TrackingParticles that don't have PSimHits inside,
         // e.g. because they were made on RECOSIM only.
