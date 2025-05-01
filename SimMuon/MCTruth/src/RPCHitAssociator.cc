@@ -1,4 +1,5 @@
 #include "SimMuon/MCTruth/interface/RPCHitAssociator.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 using namespace std;
@@ -105,4 +106,23 @@ std::set<RPCDigiSimLink> RPCHitAssociator::findRPCDigiSimLink(uint32_t rpcDetId,
   }
 
   return links;
+}
+
+int RPCHitAssociator::numberOfIRPCHits(const TrackingParticle& tp) const {
+  int count = 0;
+  const auto& simTracks = tp.g4Tracks();
+  for (const auto& kv : _SimHitMap) {
+    RPCDetId detId(kv.first);
+    if (detId.region() != 0 && (detId.station() == 3 || detId.station() == 4) && detId.ring() == 1) {
+      for (const auto& hit : kv.second) {
+        for (const auto& simTrack : simTracks) {
+          if (hit.trackId() == simTrack.trackId() && hit.eventId() == simTrack.eventId()) {
+            ++count;
+            break;
+          }
+        }
+      }
+    }
+  }
+  return count;
 }
