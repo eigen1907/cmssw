@@ -62,6 +62,24 @@
 #include "RecoMuon/MuonIdentification/interface/MuonArbitrationMethods.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 
+#include "Geometry/Records/interface/MuonGeometryRecord.h"
+#include "Geometry/RPCGeometry/interface/RPCGeometry.h"
+#include "Geometry/CSCGeometry/interface/CSCGeometry.h"
+#include "Geometry/DTGeometry/interface/DTGeometry.h"
+#include "Geometry/GEMGeometry/interface/GEMGeometry.h"
+
+#include "DataFormats/DTRecHit/interface/DTRecSegment4DCollection.h"
+#include "DataFormats/DTRecHit/interface/DTRecSegment2D.h"
+#include "DataFormats/CSCRecHit/interface/CSCSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0RecHitCollection.h"
+
+#include "TTree.h"
+#include <chrono> 
+
 class MuonMesh;
 class MuonKinkFinder;
 
@@ -246,12 +264,20 @@ private:
   edm::EDGetTokenT<reco::TrackToTrackMap> dytCollectionToken_;
   edm::EDGetTokenT<reco::VertexCollection> pvToken_;
 
+  edm::EDGetTokenT<edm::ValueMap<reco::MuonQuality> > glbQualToken_;
+  
   edm::EDGetTokenT<RPCRecHitCollection> rpcHitToken_;
   edm::EDGetTokenT<GEMRecHitCollection> gemHitToken_;
-  edm::EDGetTokenT<edm::ValueMap<reco::MuonQuality> > glbQualToken_;
+  edm::EDGetTokenT<DTRecSegment4DCollection> dtSegmentToken_;
+  edm::EDGetTokenT<CSCSegmentCollection> cscSegmentToken_;
+  edm::EDGetTokenT<GEMSegmentCollection> gemSegmentToken_;
 
   edm::Handle<RPCRecHitCollection> rpcHitHandle_;
   edm::Handle<GEMRecHitCollection> gemHitHandle_;
+  edm::Handle<DTRecSegment4DCollection> dtSegmentHandle_;
+  edm::Handle<CSCSegmentCollection> cscSegmentHandle_;
+  edm::Handle<GEMSegmentCollection> gemSegmentHandle_;
+
   edm::Handle<edm::ValueMap<reco::MuonQuality> > glbQualHandle_;
 
   const edm::ESGetToken<CSCGeometry, MuonGeometryRecord> geomTokenRun_;

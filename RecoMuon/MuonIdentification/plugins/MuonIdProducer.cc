@@ -31,9 +31,17 @@
 #include "RecoMuon/MuonIdentification/interface/MuonMesh.h"
 #include "RecoMuon/MuonIdentification/interface/MuonKinkFinder.h"
 
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include <chrono> 
+
 MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
     : geomTokenRun_(esConsumes<edm::Transition::BeginRun>()),
-      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))) {
+      propagatorToken_(esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))),
+      rpcGeomToken_(esConsumes<RPCGeometry, MuonGeometryRecord>()),
+      cscGeomToken_(esConsumes<CSCGeometry, MuonGeometryRecord>()),
+      dtGeomToken_(esConsumes<DTGeometry, MuonGeometryRecord>()),
+      gemGeomToken_(esConsumes<GEMGeometry, MuonGeometryRecord>()) {
   LogTrace("MuonIdentification") << "RecoMuon/MuonIdProducer :: Constructor called";
 
   produces<reco::MuonCollection>();
@@ -171,6 +179,15 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
 
   edm::InputTag gemHitTag("gemRecHits");
   gemHitToken_ = consumes<GEMRecHitCollection>(gemHitTag);
+
+  edm::InputTag dtSegmentTag("dt4DSegments");
+  dtSegmentToken_ = consumes<DTRecSegment4DCollection>(dtSegmentTag);
+  
+  edm::InputTag cscSegmentTag("cscSegments");
+  cscSegmentToken_ = consumes<CSCSegmentCollection>(cscSegmentTag);
+  
+  edm::InputTag gemSegmentTag("gemSegments");
+  gemSegmentToken_ = consumes<GEMSegmentCollection>(gemSegmentTag);
 
   //Consumes... UGH
   inputCollectionTypes_.resize(inputCollectionLabels_.size());
@@ -315,8 +332,13 @@ void MuonIdProducer::init(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       throw cms::Exception("FatalError") << "Unknown input collection type: #" << ICTypes::toStr(inputType);
   }
 
+  iEvent.getByToken(dtSegmentToken_, dtSegmentHandle_);
+  iEvent.getByToken(cscSegmentToken_, cscSegmentHandle_);
+  iEvent.getByToken(gemSegmentToken_, gemSegmentHandle_);
+  
   iEvent.getByToken(rpcHitToken_, rpcHitHandle_);
   iEvent.getByToken(gemHitToken_, gemHitHandle_);
+  
   if (fillGlobalTrackQuality_)
     iEvent.getByToken(glbQualToken_, glbQualHandle_);
   if (selectHighPurity_)
@@ -729,6 +751,10 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
         splitTrack = true;
       const auto& directions = splitTrack ? directions1 : directions2;
       for (const auto direction : directions) {
+        trackerMuonInfo_.trackPt.push_back(track.pt()); 
+        trackerMuonInfo_.trackP.push_back(track.p());
+        trackerMuonInfo_.trackEta.push_back(track.eta());
+        trackerMuonInfo_.trackPhi.push_back(track.phi());
         // make muon
         reco::Muon trackerMuon(makeMuon(iEvent, iSetup, trackRef, reco::Muon::InnerTrack));
         fillMuonId(iEvent, iSetup, trackerMuon, direction);
@@ -1700,6 +1726,6 @@ void MuonIdProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptio
   descCalo.add<int>("MaxSeverityHB", 9);
   descCalo.add<int>("MaxSeverityHE", 9);
   desc.add<edm::ParameterSetDescription>("CaloExtractorPSet", descCalo);
-
+  
   descriptions.addDefault(desc);
 }
