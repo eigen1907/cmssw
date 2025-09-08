@@ -53,6 +53,8 @@ private:
 using namespace edm;
 
 MuonDetLayerGeometryESProducer::MuonDetLayerGeometryESProducer(const edm::ParameterSet& p) {
+  MuonRPCDetLayerGeometryBuilder::useLegacyIsFront = p.getParameter<bool>("rpcUseLegacyIsFront");
+  
   auto cc = setWhatProduced(this);
   dtToken_ = cc.consumes();
   cscToken_ = cc.consumes();
