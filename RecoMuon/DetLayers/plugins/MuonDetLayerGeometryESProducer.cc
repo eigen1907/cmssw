@@ -111,7 +111,7 @@ std::unique_ptr<MuonDetLayerGeometry> MuonDetLayerGeometryESProducer::produce(co
 
 void MuonDetLayerGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
-  //no parameters are used
+  desc.add<bool>("rpcUseLegacyIsFront", false);
   descriptions.addDefault(desc);
 }
 
