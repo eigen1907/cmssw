@@ -61,7 +61,24 @@
 #include "RecoMuon/MuonIdentification/interface/MuonIdTruthInfo.h"
 #include "RecoMuon/MuonIdentification/interface/MuonArbitrationMethods.h"
 #include "DataFormats/Common/interface/ValueMap.h"
+
+#include "Geometry/Records/interface/MuonGeometryRecord.h"
+#include "Geometry/RPCGeometry/interface/RPCGeometry.h"
+#include "Geometry/CSCGeometry/interface/CSCGeometry.h"
+#include "Geometry/DTGeometry/interface/DTGeometry.h"
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
+
+#include "DataFormats/DTRecHit/interface/DTRecSegment4DCollection.h"
+#include "DataFormats/DTRecHit/interface/DTRecSegment2D.h"
+#include "DataFormats/CSCRecHit/interface/CSCSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMSegmentCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
+#include "DataFormats/GEMRecHit/interface/ME0RecHitCollection.h"
+
+#include "TTree.h"
+#include <chrono> 
 
 class MuonMesh;
 class MuonKinkFinder;
@@ -247,12 +264,20 @@ private:
   edm::EDGetTokenT<reco::TrackToTrackMap> dytCollectionToken_;
   edm::EDGetTokenT<reco::VertexCollection> pvToken_;
 
+  edm::EDGetTokenT<edm::ValueMap<reco::MuonQuality> > glbQualToken_;
+  
   edm::EDGetTokenT<RPCRecHitCollection> rpcHitToken_;
   edm::EDGetTokenT<GEMRecHitCollection> gemHitToken_;
-  edm::EDGetTokenT<edm::ValueMap<reco::MuonQuality> > glbQualToken_;
+  edm::EDGetTokenT<DTRecSegment4DCollection> dtSegmentToken_;
+  edm::EDGetTokenT<CSCSegmentCollection> cscSegmentToken_;
+  edm::EDGetTokenT<GEMSegmentCollection> gemSegmentToken_;
 
   edm::Handle<RPCRecHitCollection> rpcHitHandle_;
   edm::Handle<GEMRecHitCollection> gemHitHandle_;
+  edm::Handle<DTRecSegment4DCollection> dtSegmentHandle_;
+  edm::Handle<CSCSegmentCollection> cscSegmentHandle_;
+  edm::Handle<GEMSegmentCollection> gemSegmentHandle_;
+
   edm::Handle<edm::ValueMap<reco::MuonQuality> > glbQualHandle_;
 
   const edm::ESGetToken<CSCGeometry, MuonGeometryRecord> geomTokenRun_;
@@ -285,5 +310,92 @@ private:
   edm::ESGetToken<GEMGeometry, MuonGeometryRecord> gemgeomToken_;
   const GEMGeometry* gemgeom;
   double GEM_edgecut_;
+
+
+  struct TrackerMuonInfo {
+    std::vector<double> trackVx;
+    std::vector<double> trackVy;
+    std::vector<double> trackVz;
+    std::vector<double> trackPx;
+    std::vector<double> trackPy;
+    std::vector<double> trackPz;
+    std::vector<double> trackQOverP;
+    std::vector<double> trackLambda;
+    std::vector<double> trackPhi;
+    std::vector<double> trackDxy;
+    std::vector<double> trackDsz;
+    std::vector<double> trackQOverPError;
+    std::vector<double> trackLambdaError;
+    std::vector<double> trackPhiError;
+    std::vector<double> trackDxyError;
+    std::vector<double> trackDszError;
+    std::vector<int> charge;
+    std::vector<double> trackChi2;
+    std::vector<double> trackNDOF;
+
+    std::vector<bool> isGoodTrackerMuon;
+    std::vector<bool> isGoodRPCMuon;
+    std::vector<bool> isGoodGEMMuon;
+    std::vector<bool> isGoodME0Muon;
+  };
+  
+  struct MuonHitSegInfo {
+    std::vector<unsigned int> rpcHitRawId;
+    std::vector<float>        rpcHitPosX;
+    std::vector<float>        rpcHitPosY;
+    std::vector<float>        rpcHitPosZ;
+    std::vector<float>        rpcHitPosErrX;
+    std::vector<float>        rpcHitPosErrY;
+    std::vector<int>          rpcHitClsSize;
+    std::vector<int>          rpcHitBunchX;
+
+    std::vector<unsigned int> gemHitRawId;
+    std::vector<float>        gemHitPosX;
+    std::vector<float>        gemHitPosY;
+    std::vector<float>        gemHitPosZ;
+    std::vector<float>        gemHitPosErrX;
+    std::vector<float>        gemHitPosErrY;
+    std::vector<int>          gemHitClsSize;
+    std::vector<int>          gemHitBunchX;
+
+    std::vector<unsigned int> dtSegRawId;
+    std::vector<float>        dtSegPosX;
+    std::vector<float>        dtSegPosY;
+    std::vector<float>        dtSegPosZ;
+    std::vector<float>        dtSegPosErrX;
+    std::vector<float>        dtSegPosErrY;
+    std::vector<float>        dtSegDirX;
+    std::vector<float>        dtSegDirY;
+    std::vector<float>        dtSegDirZ;
+    std::vector<float>        dtSegDirErrX;
+    std::vector<float>        dtSegDirErrY;
+    std::vector<float>        dtSegChi2;
+    std::vector<int>          dtSegDOF;
+    
+    std::vector<unsigned int> cscSegRawId;
+    std::vector<float>        cscSegPosX;
+    std::vector<float>        cscSegPosY;
+    std::vector<float>        cscSegPosZ;
+    std::vector<float>        cscSegPosErrX;
+    std::vector<float>        cscSegPosErrY;
+    std::vector<float>        cscSegDirX;
+    std::vector<float>        cscSegDirY;
+    std::vector<float>        cscSegDirZ;
+    std::vector<float>        cscSegDirErrX;
+    std::vector<float>        cscSegDirErrY;
+    std::vector<float>        cscSegChi2;
+    std::vector<int>          cscSegDOF;
+    std::vector<float>        cscSegTime;
+  };
+
+  TTree* eventTree_;
+
+  TrackerMuonInfo trackerMuonInfo_;
+  MuonHitSegInfo muonHitSegInfo_;
+  
+  edm::ESGetToken<RPCGeometry, MuonGeometryRecord> rpcGeomToken_;
+  edm::ESGetToken<CSCGeometry, MuonGeometryRecord> cscGeomToken_;
+  edm::ESGetToken<DTGeometry, MuonGeometryRecord>  dtGeomToken_;
+  edm::ESGetToken<GEMGeometry, MuonGeometryRecord> gemGeomToken_;
 };
 #endif
