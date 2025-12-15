@@ -312,7 +312,8 @@ private:
   double GEM_edgecut_;
 
 
-  struct TrackerMuonInfo {
+  struct DeepMuonRecoStruct {
+    std::vector<unsigned int>    trackKey;
     std::vector<double> trackVx;
     std::vector<double> trackVy;
     std::vector<double> trackVz;
@@ -324,78 +325,226 @@ private:
     std::vector<double> trackPhi;
     std::vector<double> trackDxy;
     std::vector<double> trackDsz;
-    std::vector<double> trackQOverPError;
-    std::vector<double> trackLambdaError;
-    std::vector<double> trackPhiError;
-    std::vector<double> trackDxyError;
-    std::vector<double> trackDszError;
-    std::vector<int> charge;
+    std::vector<double> trackQOverPErr;
+    std::vector<double> trackLambdaErr;
+    std::vector<double> trackPhiErr;
+    std::vector<double> trackDxyErr;
+    std::vector<double> trackDszErr;
+    std::vector<int>    trackCharge;
     std::vector<double> trackChi2;
-    std::vector<double> trackNDOF;
+    std::vector<double> trackNdof;
+    std::vector<unsigned int> trackIsSplit;
+    std::vector<unsigned int> trackIsNormalTrkMuon;
+    std::vector<unsigned int> trackIsInOutTrkMuon;
+    std::vector<unsigned int> trackIsOutInTrkMuon;
+    std::vector<unsigned int> trackIsTrkMuon;
+    std::vector<unsigned int> trackIsTrkMuonWithArb;
 
-    std::vector<bool> isGoodTrackerMuon;
-    std::vector<bool> isGoodRPCMuon;
-    std::vector<bool> isGoodGEMMuon;
-    std::vector<bool> isGoodME0Muon;
-  };
-  
-  struct MuonHitSegInfo {
     std::vector<unsigned int> rpcHitRawId;
     std::vector<float>        rpcHitPosX;
     std::vector<float>        rpcHitPosY;
     std::vector<float>        rpcHitPosZ;
-    std::vector<float>        rpcHitPosErrX;
-    std::vector<float>        rpcHitPosErrY;
-    std::vector<int>          rpcHitClsSize;
-    std::vector<int>          rpcHitBunchX;
+    std::vector<float>        rpcHitPosXErr;
+    std::vector<float>        rpcHitPosYErr;
+    std::vector<int>          rpcHitCls;
+    std::vector<int>          rpcHitBX;
 
     std::vector<unsigned int> gemHitRawId;
     std::vector<float>        gemHitPosX;
     std::vector<float>        gemHitPosY;
     std::vector<float>        gemHitPosZ;
-    std::vector<float>        gemHitPosErrX;
-    std::vector<float>        gemHitPosErrY;
-    std::vector<int>          gemHitClsSize;
-    std::vector<int>          gemHitBunchX;
+    std::vector<float>        gemHitPosXErr;
+    std::vector<float>        gemHitPosYErr;
+    std::vector<int>          gemHitCls;
+    std::vector<int>          gemHitBX;
 
     std::vector<unsigned int> dtSegRawId;
     std::vector<float>        dtSegPosX;
     std::vector<float>        dtSegPosY;
     std::vector<float>        dtSegPosZ;
-    std::vector<float>        dtSegPosErrX;
-    std::vector<float>        dtSegPosErrY;
+    std::vector<float>        dtSegPosXErr;
+    std::vector<float>        dtSegPosYErr;
     std::vector<float>        dtSegDirX;
     std::vector<float>        dtSegDirY;
     std::vector<float>        dtSegDirZ;
-    std::vector<float>        dtSegDirErrX;
-    std::vector<float>        dtSegDirErrY;
+    std::vector<float>        dtSegDirXErr;
+    std::vector<float>        dtSegDirYErr;
     std::vector<float>        dtSegChi2;
-    std::vector<int>          dtSegDOF;
+    std::vector<int>          dtSegNdof;
     
     std::vector<unsigned int> cscSegRawId;
     std::vector<float>        cscSegPosX;
     std::vector<float>        cscSegPosY;
     std::vector<float>        cscSegPosZ;
-    std::vector<float>        cscSegPosErrX;
-    std::vector<float>        cscSegPosErrY;
+    std::vector<float>        cscSegPosXErr;
+    std::vector<float>        cscSegPosYErr;
     std::vector<float>        cscSegDirX;
     std::vector<float>        cscSegDirY;
     std::vector<float>        cscSegDirZ;
-    std::vector<float>        cscSegDirErrX;
-    std::vector<float>        cscSegDirErrY;
+    std::vector<float>        cscSegDirXErr;
+    std::vector<float>        cscSegDirYErr;
     std::vector<float>        cscSegChi2;
-    std::vector<int>          cscSegDOF;
+    std::vector<int>          cscSegNdof;
     std::vector<float>        cscSegTime;
+
+    void setBranches(TTree* tree) {
+      tree->Branch("track_key",                              &trackKey);
+      tree->Branch("track_vx",                               &trackVx);
+      tree->Branch("track_vy",                               &trackVy);
+      tree->Branch("track_vz",                               &trackVz);
+      tree->Branch("track_px",                               &trackPx);
+      tree->Branch("track_py",                               &trackPy);
+      tree->Branch("track_pz",                               &trackPz);
+      tree->Branch("track_qoverp",                           &trackQOverP);
+      tree->Branch("track_lamda",                            &trackLambda);
+      tree->Branch("track_phi",                              &trackPhi);
+      tree->Branch("track_dxy",                              &trackDxy);
+      tree->Branch("track_dsz",                              &trackDsz);
+      tree->Branch("track_qoverp_err",                     &trackQOverPErr);
+      tree->Branch("track_lambda_err",                     &trackLambdaErr);
+      tree->Branch("track_phi_err",                        &trackPhiErr);
+      tree->Branch("track_dxy_err",                        &trackDxyErr);
+      tree->Branch("track_dsz_err",                        &trackDszErr);
+      tree->Branch("track_charge",                           &trackCharge);
+      tree->Branch("track_chi2",                             &trackChi2);
+      tree->Branch("track_ndof",                             &trackNdof);
+      tree->Branch("track_is_split",                         &trackIsSplit);
+      tree->Branch("track_is_normal_trk_muon",           &trackIsNormalTrkMuon);
+      tree->Branch("track_is_inout_trk_muon",            &trackIsInOutTrkMuon);
+      tree->Branch("track_is_outin_trk_muon",            &trackIsOutInTrkMuon);
+      tree->Branch("track_is_trk_muon",                  &trackIsTrkMuon);
+      tree->Branch("track_is_trk_muon_with_arb",          &trackIsTrkMuonWithArb);
+
+      tree->Branch("rpc_hit_rawid",     &rpcHitRawId);
+      tree->Branch("rpc_hit_pos_x",     &rpcHitPosX);
+      tree->Branch("rpc_hit_pos_y",     &rpcHitPosY);
+      tree->Branch("rpc_hit_pos_z",     &rpcHitPosZ);
+      tree->Branch("rpc_hit_pos_x_err", &rpcHitPosXErr);
+      tree->Branch("rpc_hit_pos_y_err", &rpcHitPosYErr);
+      tree->Branch("rpc_hit_cls",  &rpcHitCls);
+      tree->Branch("rpc_hit_bx",        &rpcHitBX);
+
+      tree->Branch("gem_hit_rawid",     &gemHitRawId);
+      tree->Branch("gem_hit_pos_x",     &gemHitPosX);
+      tree->Branch("gem_hit_pos_y",     &gemHitPosY);
+      tree->Branch("gem_hit_pos_z",     &gemHitPosZ);
+      tree->Branch("gem_hit_pos_x_err", &gemHitPosXErr);
+      tree->Branch("gem_hit_pos_y_err", &gemHitPosYErr);
+      tree->Branch("gem_hit_cls",  &gemHitCls);
+      tree->Branch("gem_hit_bx",        &gemHitBX);
+
+      tree->Branch("dt_seg_rawid",     &dtSegRawId);
+      tree->Branch("dt_seg_pos_x",     &dtSegPosX);
+      tree->Branch("dt_seg_pos_y",     &dtSegPosY);
+      tree->Branch("dt_seg_pos_z",     &dtSegPosZ);
+      tree->Branch("dt_seg_pos_x_err", &dtSegPosXErr);
+      tree->Branch("dt_seg_pos_y_err", &dtSegPosYErr);
+      tree->Branch("dt_seg_dir_x",     &dtSegDirX);
+      tree->Branch("dt_seg_dir_y",     &dtSegDirY);
+      tree->Branch("dt_seg_dir_z",     &dtSegDirZ);
+      tree->Branch("dt_seg_dir_x_err", &dtSegDirXErr);
+      tree->Branch("dt_seg_dir_y_err", &dtSegDirYErr);
+      tree->Branch("dt_seg_chi2",      &dtSegChi2);
+      tree->Branch("dt_seg_ndof",       &dtSegNdof);
+
+      tree->Branch("csc_seg_rawid",     &cscSegRawId);
+      tree->Branch("csc_seg_pos_x",     &cscSegPosX);
+      tree->Branch("csc_seg_pos_y",     &cscSegPosY);
+      tree->Branch("csc_seg_pos_z",     &cscSegPosZ);
+      tree->Branch("csc_seg_pos_x_err", &cscSegPosXErr);
+      tree->Branch("csc_seg_pos_y_err", &cscSegPosYErr);
+      tree->Branch("csc_seg_dir_x",     &cscSegDirX);
+      tree->Branch("csc_seg_dir_y",     &cscSegDirY);
+      tree->Branch("csc_seg_dir_z",     &cscSegDirZ);
+      tree->Branch("csc_seg_dir_x_err", &cscSegDirXErr);
+      tree->Branch("csc_seg_dir_y_err", &cscSegDirYErr);
+      tree->Branch("csc_seg_chi2",      &cscSegChi2);
+      tree->Branch("csc_seg_ndof",       &cscSegNdof);
+      tree->Branch("csc_seg_time",      &cscSegTime);
+    }
+
+    void clear() {
+      trackKey.clear();
+      trackVx.clear();
+      trackVy.clear();
+      trackVz.clear();
+      trackPx.clear();
+      trackPy.clear();
+      trackPz.clear();
+      trackQOverP.clear();
+      trackLambda.clear();
+      trackPhi.clear();
+      trackDxy.clear();
+      trackDsz.clear();
+      trackQOverPErr.clear();
+      trackLambdaErr.clear();
+      trackPhiErr.clear();
+      trackDxyErr.clear();
+      trackDszErr.clear();
+      trackCharge.clear();
+      trackChi2.clear();
+      trackNdof.clear();
+      trackIsSplit.clear();
+      trackIsNormalTrkMuon.clear();
+      trackIsInOutTrkMuon.clear();
+      trackIsOutInTrkMuon.clear();
+      trackIsTrkMuon.clear();
+      trackIsTrkMuonWithArb.clear();
+
+      rpcHitRawId.clear();
+      rpcHitPosX.clear();
+      rpcHitPosY.clear();
+      rpcHitPosZ.clear();
+      rpcHitPosXErr.clear();
+      rpcHitPosYErr.clear();
+      rpcHitCls.clear();
+      rpcHitBX.clear();
+
+      gemHitRawId.clear();
+      gemHitPosX.clear();
+      gemHitPosY.clear();
+      gemHitPosZ.clear();
+      gemHitPosXErr.clear();
+      gemHitPosYErr.clear();
+      gemHitCls.clear();
+      gemHitBX.clear();
+
+      dtSegRawId.clear();
+      dtSegPosX.clear();
+      dtSegPosY.clear();
+      dtSegPosZ.clear();
+      dtSegPosXErr.clear();
+      dtSegPosYErr.clear();
+      dtSegDirX.clear();
+      dtSegDirY.clear();
+      dtSegDirZ.clear();
+      dtSegDirXErr.clear();
+      dtSegDirYErr.clear();
+      dtSegChi2.clear();
+      dtSegNdof.clear();
+
+      cscSegRawId.clear();
+      cscSegPosX.clear();
+      cscSegPosY.clear();
+      cscSegPosZ.clear();
+      cscSegPosXErr.clear();
+      cscSegPosYErr.clear();
+      cscSegDirX.clear();
+      cscSegDirY.clear();
+      cscSegDirZ.clear();
+      cscSegDirXErr.clear();
+      cscSegDirYErr.clear();
+      cscSegChi2.clear();
+      cscSegNdof.clear();
+      cscSegTime.clear();
+    }
   };
-
-  TTree* eventTree_;
-
-  TrackerMuonInfo trackerMuonInfo_;
-  MuonHitSegInfo muonHitSegInfo_;
   
   edm::ESGetToken<RPCGeometry, MuonGeometryRecord> rpcGeomToken_;
   edm::ESGetToken<CSCGeometry, MuonGeometryRecord> cscGeomToken_;
   edm::ESGetToken<DTGeometry, MuonGeometryRecord>  dtGeomToken_;
   edm::ESGetToken<GEMGeometry, MuonGeometryRecord> gemGeomToken_;
+  DeepMuonRecoStruct DeepMuonRecoStruct_;
+  TTree* TTree_;
 };
 #endif
