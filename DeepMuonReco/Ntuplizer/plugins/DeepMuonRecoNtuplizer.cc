@@ -19,7 +19,6 @@
 #include "DataFormats/MuonReco/interface/MuonFwd.h" 
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
-#include "DataFormats/MuonReco/interface/MuonSelectors.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 
 #include "DataFormats/DTRecHit/interface/DTRecSegment4DCollection.h"
@@ -75,17 +74,20 @@ private:
   std::vector<double> trackQOverP, trackLambda;
   std::vector<double> trackDxy, trackDsz;
   
-  std::vector<double> trackQOverPErr, trackLambdaErr, trackPhiErr, trackDxyErr, trackDszErr;
+  std::vector<double> trackQOverPErr, trackLambdaErr;
+  std::vector<double> trackPhiErr, trackDxyErr, trackDszErr;
   
   std::vector<double> trackChi2, trackNdof;
   std::vector<int> trackCharge;
   std::vector<int> trackNAlgo;
 
+  std::vector<int> trackIsGoodTrack;
   std::vector<int> trackIsRecoMuon; 
   std::vector<int> trackIsTrkMuon;
   std::vector<int> trackIsGlbMuon;  
   std::vector<int> trackIsPFMuon;
 
+  std::vector<int> trackIsMatchedMuon;
   std::vector<int> trackMatchTpIdx;
   std::vector<float> trackMatchQuality;
 
@@ -118,21 +120,20 @@ private:
 };
 
 DeepMuonRecoNtuplizer::DeepMuonRecoNtuplizer(const edm::ParameterSet& iConfig)
-    : muonToken_(consumes<reco::MuonCollection>(iConfig.getParameter<edm::InputTag>("muons"))),
-      trackToken_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("tracks"))),
-      tpToken_(consumes<TrackingParticleCollection>(iConfig.getParameter<edm::InputTag>("trackingParticles"))),
-      associatorToken_(consumes<reco::TrackToTrackingParticleAssociator>(iConfig.getParameter<edm::InputTag>("associator"))),
-      
-      rpcHitToken_(consumes<RPCRecHitCollection>(iConfig.getParameter<edm::InputTag>("rpcRecHits"))),
-      gemHitToken_(consumes<GEMRecHitCollection>(iConfig.getParameter<edm::InputTag>("gemRecHits"))),
-      dtSegmentToken_(consumes<DTRecSegment4DCollection>(iConfig.getParameter<edm::InputTag>("dtSegments"))),
-      cscSegmentToken_(consumes<CSCSegmentCollection>(iConfig.getParameter<edm::InputTag>("cscSegments"))),
-
-      rpcGeomToken_(esConsumes()),
-      gemGeomToken_(esConsumes()),
-      dtGeomToken_(esConsumes()),
-      cscGeomToken_(esConsumes()) {
-  
+  : muonToken_(consumes<reco::MuonCollection>(iConfig.getParameter<edm::InputTag>("muons"))),
+    trackToken_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("tracks"))),
+    tpToken_(consumes<TrackingParticleCollection>(iConfig.getParameter<edm::InputTag>("trackingParticles"))),
+    associatorToken_(consumes<reco::TrackToTrackingParticleAssociator>(iConfig.getParameter<edm::InputTag>("associator"))),
+    
+    rpcHitToken_(consumes<RPCRecHitCollection>(iConfig.getParameter<edm::InputTag>("rpcRecHits"))),
+    gemHitToken_(consumes<GEMRecHitCollection>(iConfig.getParameter<edm::InputTag>("gemRecHits"))),
+    dtSegmentToken_(consumes<DTRecSegment4DCollection>(iConfig.getParameter<edm::InputTag>("dtSegments"))),
+    cscSegmentToken_(consumes<CSCSegmentCollection>(iConfig.getParameter<edm::InputTag>("cscSegments"))),
+    
+    rpcGeomToken_(esConsumes()),
+    gemGeomToken_(esConsumes()),
+    dtGeomToken_(esConsumes()),
+    cscGeomToken_(esConsumes()) {
   usesResource("TFileService");
 }
 
@@ -140,88 +141,90 @@ void DeepMuonRecoNtuplizer::beginJob() {
   edm::Service<TFileService> fs;
   tree_ = fs->make<TTree>("tree", "DeepMuonReco Tree");
 
-  tree_->Branch("track_pt",            &trackPt);   
-  tree_->Branch("track_eta",           &trackEta);  
-  tree_->Branch("track_phi",           &trackPhi);
-  tree_->Branch("track_px",            &trackPx);
-  tree_->Branch("track_py",            &trackPy);
-  tree_->Branch("track_pz",            &trackPz);
-  tree_->Branch("track_vx",            &trackVx);
-  tree_->Branch("track_vy",            &trackVy);
-  tree_->Branch("track_vz",            &trackVz);
-  tree_->Branch("track_qoverp",        &trackQOverP);
-  tree_->Branch("track_lamda",         &trackLambda);
-  tree_->Branch("track_dxy",           &trackDxy);
-  tree_->Branch("track_dsz",           &trackDsz);
-  tree_->Branch("track_qoverp_err",    &trackQOverPErr);
-  tree_->Branch("track_lambda_err",    &trackLambdaErr);
-  tree_->Branch("track_phi_err",       &trackPhiErr);
-  tree_->Branch("track_dxy_err",       &trackDxyErr);
-  tree_->Branch("track_dsz_err",       &trackDszErr);
-  tree_->Branch("track_charge",        &trackCharge);
-  tree_->Branch("track_chi2",          &trackChi2);
-  tree_->Branch("track_ndof",          &trackNdof);
-  tree_->Branch("track_n_algo",        &trackNAlgo);
-  tree_->Branch("track_is_reco_muon",  &trackIsRecoMuon);
-  tree_->Branch("track_is_trk_muon",   &trackIsTrkMuon);
-  tree_->Branch("track_is_glb_muon",   &trackIsGlbMuon);
-  tree_->Branch("track_is_pf_muon",    &trackIsPFMuon);
+  tree_->Branch("track_pt", &trackPt);   
+  tree_->Branch("track_eta", &trackEta);  
+  tree_->Branch("track_phi", &trackPhi);
+  tree_->Branch("track_px", &trackPx);
+  tree_->Branch("track_py", &trackPy);
+  tree_->Branch("track_pz", &trackPz);
+  tree_->Branch("track_vx", &trackVx);
+  tree_->Branch("track_vy", &trackVy);
+  tree_->Branch("track_vz", &trackVz);
+  tree_->Branch("track_qoverp", &trackQOverP);
+  tree_->Branch("track_lamda", &trackLambda);
+  tree_->Branch("track_dxy", &trackDxy);
+  tree_->Branch("track_dsz", &trackDsz);
+  tree_->Branch("track_qoverp_err", &trackQOverPErr);
+  tree_->Branch("track_lambda_err", &trackLambdaErr);
+  tree_->Branch("track_phi_err", &trackPhiErr);
+  tree_->Branch("track_dxy_err", &trackDxyErr);
+  tree_->Branch("track_dsz_err", &trackDszErr);
+  tree_->Branch("track_charge", &trackCharge);
+  tree_->Branch("track_chi2", &trackChi2);
+  tree_->Branch("track_ndof", &trackNdof);
+  tree_->Branch("track_n_algo", &trackNAlgo);
+  tree_->Branch("track_is_good_track", &trackIsGoodTrack);
+  tree_->Branch("track_is_reco_muon", &trackIsRecoMuon);
+  tree_->Branch("track_is_trk_muon", &trackIsTrkMuon);
+  tree_->Branch("track_is_glb_muon", &trackIsGlbMuon);
+  tree_->Branch("track_is_pf_muon", &trackIsPFMuon);
+  tree_->Branch("track_is_matched_muon", &trackIsMatchedMuon);
   tree_->Branch("track_match_quality", &trackMatchQuality);
-  tree_->Branch("track_match_tp_idx",  &trackMatchTpIdx);
+  tree_->Branch("track_match_tp_idx", &trackMatchTpIdx);
 
-  tree_->Branch("tp_pt",               &tpPt);
-  tree_->Branch("tp_eta",              &tpEta);
-  tree_->Branch("tp_phi",              &tpPhi);
-  tree_->Branch("tp_pdg_id",           &tpPdgId);
-  tree_->Branch("tp_charge",           &tpCharge);
-  tree_->Branch("tp_status",           &tpStatus);
+  tree_->Branch("tp_pt", &tpPt);
+  tree_->Branch("tp_eta", &tpEta);
+  tree_->Branch("tp_phi", &tpPhi);
+  tree_->Branch("tp_pdg_id", &tpPdgId);
+  tree_->Branch("tp_charge", &tpCharge);
+  tree_->Branch("tp_status", &tpStatus);
 
-  tree_->Branch("rpc_hit_rawid",       &rpcHitRawId);
-  tree_->Branch("rpc_hit_pos_x",       &rpcHitPosX);
-  tree_->Branch("rpc_hit_pos_y",       &rpcHitPosY);
-  tree_->Branch("rpc_hit_pos_z",       &rpcHitPosZ);
-  tree_->Branch("rpc_hit_pos_x_err",   &rpcHitPosXErr);
-  tree_->Branch("rpc_hit_pos_y_err",   &rpcHitPosYErr);
-  tree_->Branch("rpc_hit_cls",         &rpcHitCls);
-  tree_->Branch("rpc_hit_bx",          &rpcHitBX);
+  tree_->Branch("rpc_hit_rawid", &rpcHitRawId);
+  tree_->Branch("rpc_hit_pos_x", &rpcHitPosX);
+  tree_->Branch("rpc_hit_pos_y", &rpcHitPosY);
+  tree_->Branch("rpc_hit_pos_z", &rpcHitPosZ);
+  tree_->Branch("rpc_hit_pos_x_err", &rpcHitPosXErr);
+  tree_->Branch("rpc_hit_pos_y_err", &rpcHitPosYErr);
+  tree_->Branch("rpc_hit_cls", &rpcHitCls);
+  tree_->Branch("rpc_hit_bx", &rpcHitBX);
 
-  tree_->Branch("gem_hit_rawid",       &gemHitRawId);
-  tree_->Branch("gem_hit_pos_x",       &gemHitPosX);
-  tree_->Branch("gem_hit_pos_y",       &gemHitPosY);
-  tree_->Branch("gem_hit_pos_z",       &gemHitPosZ);
-  tree_->Branch("gem_hit_pos_x_err",   &gemHitPosXErr);
-  tree_->Branch("gem_hit_pos_y_err",   &gemHitPosYErr);
-  tree_->Branch("gem_hit_cls",         &gemHitCls);
-  tree_->Branch("gem_hit_bx",          &gemHitBX);
+  tree_->Branch("gem_hit_rawid", &gemHitRawId);
+  tree_->Branch("gem_hit_pos_x", &gemHitPosX);
+  tree_->Branch("gem_hit_pos_y", &gemHitPosY);
+  tree_->Branch("gem_hit_pos_z", &gemHitPosZ);
+  tree_->Branch("gem_hit_pos_x_err", &gemHitPosXErr);
+  tree_->Branch("gem_hit_pos_y_err", &gemHitPosYErr);
+  tree_->Branch("gem_hit_cls", &gemHitCls);
+  tree_->Branch("gem_hit_bx", &gemHitBX);
 
-  tree_->Branch("dt_seg_rawid",        &dtSegRawId);
-  tree_->Branch("dt_seg_pos_x",        &dtSegPosX);
-  tree_->Branch("dt_seg_pos_y",        &dtSegPosY);
-  tree_->Branch("dt_seg_pos_z",        &dtSegPosZ);
-  tree_->Branch("dt_seg_pos_x_err",    &dtSegPosXErr);
-  tree_->Branch("dt_seg_pos_y_err",    &dtSegPosYErr);
-  tree_->Branch("dt_seg_dir_x",        &dtSegDirX);
-  tree_->Branch("dt_seg_dir_y",        &dtSegDirY);
-  tree_->Branch("dt_seg_dir_z",        &dtSegDirZ);
-  tree_->Branch("dt_seg_dir_x_err",    &dtSegDirXErr);
-  tree_->Branch("dt_seg_dir_y_err",    &dtSegDirYErr);
-  tree_->Branch("dt_seg_chi2",         &dtSegChi2);
-  tree_->Branch("dt_seg_ndof",         &dtSegNdof);
+  tree_->Branch("dt_seg_rawid", &dtSegRawId);
+  tree_->Branch("dt_seg_pos_x", &dtSegPosX);
+  tree_->Branch("dt_seg_pos_y", &dtSegPosY);
+  tree_->Branch("dt_seg_pos_z", &dtSegPosZ);
+  tree_->Branch("dt_seg_pos_x_err", &dtSegPosXErr);
+  tree_->Branch("dt_seg_pos_y_err", &dtSegPosYErr);
+  tree_->Branch("dt_seg_dir_x", &dtSegDirX);
+  tree_->Branch("dt_seg_dir_y", &dtSegDirY);
+  tree_->Branch("dt_seg_dir_z", &dtSegDirZ);
+  tree_->Branch("dt_seg_dir_x_err", &dtSegDirXErr);
+  tree_->Branch("dt_seg_dir_y_err", &dtSegDirYErr);
+  tree_->Branch("dt_seg_chi2", &dtSegChi2);
+  tree_->Branch("dt_seg_ndof", &dtSegNdof);
 
-  tree_->Branch("csc_seg_rawid",       &cscSegRawId);
-  tree_->Branch("csc_seg_pos_x",       &cscSegPosX);
-  tree_->Branch("csc_seg_pos_y",       &cscSegPosY);
-  tree_->Branch("csc_seg_pos_z",       &cscSegPosZ);
-  tree_->Branch("csc_seg_pos_x_err",   &cscSegPosXErr);
-  tree_->Branch("csc_seg_pos_y_err",   &cscSegPosYErr);
-  tree_->Branch("csc_seg_dir_x",       &cscSegDirX);
-  tree_->Branch("csc_seg_dir_y",       &cscSegDirY);
-  tree_->Branch("csc_seg_dir_z",       &cscSegDirZ);
-  tree_->Branch("csc_seg_dir_x_err",   &cscSegDirXErr);
-  tree_->Branch("csc_seg_dir_y_err",   &cscSegDirYErr);
-  tree_->Branch("csc_seg_chi2",        &cscSegChi2);
-  tree_->Branch("csc_seg_ndof",        &cscSegNdof);
-  tree_->Branch("csc_seg_time",        &cscSegTime);
+  tree_->Branch("csc_seg_rawid", &cscSegRawId);
+  tree_->Branch("csc_seg_pos_x", &cscSegPosX);
+  tree_->Branch("csc_seg_pos_y", &cscSegPosY);
+  tree_->Branch("csc_seg_pos_z", &cscSegPosZ);
+  tree_->Branch("csc_seg_pos_x_err", &cscSegPosXErr);
+  tree_->Branch("csc_seg_pos_y_err", &cscSegPosYErr);
+  tree_->Branch("csc_seg_dir_x", &cscSegDirX);
+  tree_->Branch("csc_seg_dir_y", &cscSegDirY);
+  tree_->Branch("csc_seg_dir_z", &cscSegDirZ);
+  tree_->Branch("csc_seg_dir_x_err", &cscSegDirXErr);
+  tree_->Branch("csc_seg_dir_y_err", &cscSegDirYErr);
+  tree_->Branch("csc_seg_chi2", &cscSegChi2);
+  tree_->Branch("csc_seg_ndof", &cscSegNdof);
+  tree_->Branch("csc_seg_time", &cscSegTime);
 }
 
 void DeepMuonRecoNtuplizer::clearVectors() {
@@ -234,6 +237,7 @@ void DeepMuonRecoNtuplizer::clearVectors() {
   trackDxyErr.clear(); trackDszErr.clear();
   trackChi2.clear(); trackNdof.clear();
   trackCharge.clear(); trackNAlgo.clear();
+  trackIsGoodTrack.clear(); trackIsMatchedMuon.clear();
   trackIsRecoMuon.clear(); trackIsTrkMuon.clear(); 
   trackIsGlbMuon.clear(); trackIsPFMuon.clear();
   trackMatchTpIdx.clear(); trackMatchQuality.clear();
@@ -392,21 +396,21 @@ void DeepMuonRecoNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSe
 
   edm::RefToBaseVector<reco::Track> trackRefs;
   for (size_t i = 0; i < tracks->size(); ++i) {
-      trackRefs.push_back(edm::RefToBase<reco::Track>(reco::TrackRef(tracks, i)));
+    trackRefs.push_back(edm::RefToBase<reco::Track>(reco::TrackRef(tracks, i)));
   }
   
   edm::RefVector<TrackingParticleCollection> tpRefs;
   for (size_t i = 0; i < tps->size(); ++i) {
-      tpRefs.push_back(TrackingParticleRef(tps, i));
+    tpRefs.push_back(TrackingParticleRef(tps, i));
   }
 
   reco::RecoToSimCollection recoToSims = associator.associateRecoToSim(trackRefs, tpRefs);
   
   std::map<unsigned int, const reco::Muon*> trackToMuonMap;
   for (const auto& mu : *muons) {
-      if (mu.innerTrack().isNonnull()) {
-          trackToMuonMap[mu.innerTrack().key()] = &mu;
-      }
+    if (mu.innerTrack().isNonnull()) {
+      trackToMuonMap[mu.innerTrack().key()] = &mu;
+    }
   }
 
   for (size_t i = 0; i < tracks->size(); ++i) {
@@ -439,17 +443,22 @@ void DeepMuonRecoNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSe
     trackCharge.push_back(trkRef->charge());
     trackNAlgo.push_back(trkRef->algo()); 
 
+    int isGoodTrack = 0;
     int isRecoMuon = 0;
     int isTrkMuon = 0;
     int isGlbMuon = 0;
     int isPFMuon = 0;
 
+    if ((trkRef->pt() > 0.5) && (trkRef->p() > 2.5) && (std::abs(trkRef->eta()) < 3.0)) {
+      isGoodTrack = 1;
+    }
+
     if (trackToMuonMap.count(trkRef.key())) {
-        const reco::Muon* mu = trackToMuonMap[trkRef.key()];
-        isRecoMuon = 1;
-        isTrkMuon = mu->isTrackerMuon();
-        isGlbMuon = mu->isGlobalMuon();
-        isPFMuon = mu->isPFMuon();
+      const reco::Muon* mu = trackToMuonMap[trkRef.key()];
+      isRecoMuon = 1;
+      isTrkMuon = mu->isTrackerMuon();
+      isGlbMuon = mu->isGlobalMuon();
+      isPFMuon = mu->isPFMuon();
     }
 
     trackIsRecoMuon.push_back(isRecoMuon);
@@ -457,35 +466,43 @@ void DeepMuonRecoNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSe
     trackIsGlbMuon.push_back(isGlbMuon);
     trackIsPFMuon.push_back(isPFMuon);
 
+    int isMatchedMuon = 0;
     int matchedTpIdx = -1;
     float matchQual = 0.0;
-
     edm::RefToBase<reco::Track> trkRefBase(trkRef);
     if (recoToSims.find(trkRefBase) != recoToSims.end()) {
       const auto& tpQualPairs = recoToSims[trkRefBase];
       if (!tpQualPairs.empty()) {
         const auto& tpQualPair = tpQualPairs.front();
-        for(size_t k = 0; k < tps->size(); ++k) {
-            if(tpQualPair.first == TrackingParticleRef(tps, k)) {
-                matchedTpIdx = k;
-                break;
-            }
-        }
+        const auto& bestTpRef = tpQualPair.first;
         matchQual = tpQualPair.second;
+        
+        if (std::abs(bestTpRef->pdgId()) == 13 && bestTpRef->status() == 1) {
+          isMatchedMuon = 1;
+        }
+        
+        for(size_t k = 0; k < tps->size(); ++k) {
+          if(bestTpRef == TrackingParticleRef(tps, k)) {
+            matchedTpIdx = k;
+            break;
+          }
+        }
       }
     }
+    trackIsGoodTrack.push_back(isGoodTrack);
+    trackIsMatchedMuon.push_back(isMatchedMuon);
     trackMatchTpIdx.push_back(matchedTpIdx);
     trackMatchQuality.push_back(matchQual);
   }
 
   for (size_t i = 0; i < tps->size(); ++i) {
-      TrackingParticleRef tpRef(tps, i);
-      tpPt.push_back(tpRef->pt());
-      tpEta.push_back(tpRef->eta());
-      tpPhi.push_back(tpRef->phi());
-      tpPdgId.push_back(tpRef->pdgId());
-      tpCharge.push_back(tpRef->charge());
-      tpStatus.push_back(tpRef->status());
+    TrackingParticleRef tpRef(tps, i);
+    tpPt.push_back(tpRef->pt());
+    tpEta.push_back(tpRef->eta());
+    tpPhi.push_back(tpRef->phi());
+    tpPdgId.push_back(tpRef->pdgId());
+    tpCharge.push_back(tpRef->charge());
+    tpStatus.push_back(tpRef->status());
   }
 
   tree_->Fill();

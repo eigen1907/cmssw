@@ -14,7 +14,8 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T33', ''
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:recosim.root')
+    #fileNames = cms.untracked.vstring('file:recosim.root')
+    fileNames = cms.untracked.vstring('file:/home/joshin/workspace-gate/Store/store-hdfs/DeepMuonReco/CMSSW_16_0_0_pre2/Run4D121/tenmu-pileup/step4_recosim/output_0.root')
 )
 
 process.load("SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi")
