@@ -1,20 +1,16 @@
 <use name="FWCore/Framework"/>
-<use name="FWCore/PluginManager"/>
 <use name="FWCore/ParameterSet"/>
 <use name="FWCore/ServiceRegistry"/>
 
 <use name="DataFormats/TrackReco"/>
 <use name="DataFormats/MuonReco"/>
-<use name="DataFormats/PatCandidates"/>
 
-<use name="DataFormats/TrackingRecHit"/>
 <use name="DataFormats/DTRecHit"/>
 <use name="DataFormats/CSCRecHit"/>
 <use name="DataFormats/RPCRecHit"/>
 <use name="DataFormats/GEMRecHit"/>
 
 <use name="Geometry/Records"/>
-<use name="Geometry/CommonDetUnit"/>
 <use name="Geometry/DTGeometry"/>
 <use name="Geometry/CSCGeometry"/>
 <use name="Geometry/RPCGeometry"/>
@@ -24,6 +20,5 @@
 <use name="SimDataFormats/Associations"/>
 
 <use name="CommonTools/UtilAlgos"/>
-<use name="root"/>
 
 <flags EDM_PLUGIN="1"/>
