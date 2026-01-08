@@ -22,3 +22,4 @@ __init__.py
 #ignore mac specific file
 .DS_Store
 *crab_*
+*logs*

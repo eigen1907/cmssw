@@ -1,12 +1,12 @@
-
 import FWCore.ParameterSet.Config as cms
-from FWCore.ParameterSet.VarParsing import VarParsing
+
 from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
 
+process = cms.Process('RERECO', Phase2C17I13M9)
+
+from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
 options.parseArguments()
-
-process = cms.Process('RERECO',Phase2C17I13M9)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
@@ -64,11 +64,10 @@ process.options = cms.untracked.PSet(
 )
 
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('step2_RERECO nevts:3'),
+    annotation = cms.untracked.string('step2_RERECO nevts:-1'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
-
 
 process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
     dataset = cms.untracked.PSet(
@@ -82,9 +81,19 @@ process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '140X_mcRun4_realistic_v4', '')
+process.RECOSIMoutput.outputCommands.append('drop *')
+process.RECOSIMoutput.outputCommands.append('keep *_muons_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_generalTracks_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_offlineBeamSpot_*_*')
 process.RECOSIMoutput.outputCommands.append('keep *_mix_MergedTrackTruth_*')
 process.RECOSIMoutput.outputCommands.append('keep *_genParticles_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_rpcRecHits_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_gemRecHits_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_dt4DSegments_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_cscSegments_*_*')
 process.RECOSIMoutput.outputCommands.append('keep *_simSiPixelDigis_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_siPixelClusters_*_*')
+process.RECOSIMoutput.outputCommands.append('keep *_siPhase2Clusters_*_*')
 
 process.raw2digi_step = cms.Path(process.RawToDigi)
 process.reconstruction_step = cms.Path(process.reconstruction)
@@ -101,6 +110,7 @@ from SLHCUpgradeSimulations.Configuration.aging import customise_aging_1000
 process = customise_aging_1000(process)
 
 process.options.accelerators = cms.untracked.vstring('cpu')
+
 from FWCore.Modules.logErrorHarvester_cff import customiseLogErrorHarvesterUsingOutputCommands
 process = customiseLogErrorHarvesterUsingOutputCommands(process)
 

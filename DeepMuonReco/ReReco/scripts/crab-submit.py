@@ -64,10 +64,16 @@ def run(pset: Path,
     config.Data.publication  = False
     config.Data.allowNonValidInputDataset = True
     config.Data.splitting = 'FileBased'
-    config.Data.unitsPerJob = 10
+    config.Data.unitsPerJob = 1
+    #config.Data.splitting = 'EventAwareLumiBased'
+    #config.Data.unitsPerJob = 12
+    #config.Data.splitting = 'Automatic'
     # Site
     config.Site.storageSite = storage_site
     #config.Site.blacklist = ['T1_DE_KIT']
+    # Set max cpus, memory (max 3 GB memory by 1 core by default)
+    config.JobType.numCores = 8
+    config.JobType.maxMemoryMB = 16000
 
     for item in input_list:
         submit(config=config, input_dataset=item['input_dataset'],

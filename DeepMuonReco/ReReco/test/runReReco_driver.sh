@@ -6,7 +6,7 @@ cmsDriver.py step2_RERECO \
     --conditions 140X_mcRun4_realistic_v4 \
     --geometry Extended2026D110 \
     --era Phase2C17I13M9 \
-    --python_filename ReReco_cfg.py \
+    --python_filename runReReco_cfg.py \
     --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000 \
     --customise_commands "process.options.accelerators = cms.untracked.vstring('cpu')" \
     --outputCommand "keep *_mix_MergedTrackTruth_*,keep *_genParticles_*_*,keep *_simSiPixelDigis_*_*" \
