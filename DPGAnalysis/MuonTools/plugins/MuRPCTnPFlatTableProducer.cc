@@ -165,7 +165,7 @@ private:
   };
 
 
-  const std::vector<std::tuple<Column, std::string, std::string> > FLOAT_COLUMNS = {
+  const std::vector<std::tuple<Column, std::string, std::string> > DOUBLE_COLUMNS = {
     // tag muon
     {Column::kTagPt, "tag_pt", "Tag Muon pT [GeV]"},
     {Column::kTagEta, "tag_eta", "Tag Muon eta"},
@@ -189,7 +189,7 @@ private:
     {Column::kPullYV2, "pull_y_v2", "Pull Y V2"},
   };
 
-  const std::vector<std::tuple<Column, std::string, std::string> > INT16_COLUMNS = {
+  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
     {Column::kRegion, "region", "region"},
     {Column::kRing, "ring", "ring"},
     {Column::kStation, "station", "station"},
@@ -197,9 +197,7 @@ private:
     {Column::kLayer, "layer", "layer"},
     {Column::kSubsector, "subsector", "subsector"},
     {Column::kRoll, "roll", "roll"},
-  };
 
-  const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
     {Column::kClusterSize, "cls", "Cluster Size"},
     {Column::kBunchX, "bx", "Bunch Crossing"},
   };
@@ -293,16 +291,12 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   /////////////////////////////////////////////////////////////////////////////
   // STEP 2: CREATE COLUMNS
   /////////////////////////////////////////////////////////////////////////////
-  std::map<Column, std::vector<float> > float_columns;
-  std::map<Column, std::vector<int16_t> > int16_columns;
+  std::map<Column, std::vector<double> > double_columns;
   std::map<Column, std::vector<int> > int_columns;
   std::map<Column, std::vector<bool> > bool_columns;
 
-  for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
-    float_columns.insert({key, {}});
-  }
-  for (const auto& [key, name, descr] : INT16_COLUMNS) {
-    int16_columns.insert({key, {}});
+  for (const auto& [key, name, descr] : DOUBLE_COLUMNS) {
+    double_columns.insert({key, {}});
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
     int_columns.insert({key, {}});
@@ -311,10 +305,7 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
     bool_columns.insert({key, {}});
   }
 
-  for (auto& [key, value] : float_columns) {
-    value.reserve(size);
-  }
-  for (auto& [key, value] : int16_columns) {
+  for (auto& [key, value] : double_columns) {
     value.reserve(size);
   }
   for (auto& [key, value] : int_columns) {
@@ -325,34 +316,34 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   }
 
   if (result.probe.isNonnull()) {
-    float_columns.at(Column::kTagPt).assign(size, result.tag->pt());
-    float_columns.at(Column::kTagEta).assign(size, result.tag->eta());
-    float_columns.at(Column::kTagPhi).assign(size, result.tag->phi());
+    double_columns.at(Column::kTagPt).assign(size, result.tag->pt());
+    double_columns.at(Column::kTagEta).assign(size, result.tag->eta());
+    double_columns.at(Column::kTagPhi).assign(size, result.tag->phi());
 
-    float_columns.at(Column::kProbePt).assign(size, result.probe->pt());
-    float_columns.at(Column::kProbeEta).assign(size, result.probe->eta());
-    float_columns.at(Column::kProbePhi).assign(size, result.probe->phi());
-    float_columns.at(Column::kProbeTime).assign(size, result.probe->time().timeAtIpInOut);
+    double_columns.at(Column::kProbePt).assign(size, result.probe->pt());
+    double_columns.at(Column::kProbeEta).assign(size, result.probe->eta());
+    double_columns.at(Column::kProbePhi).assign(size, result.probe->phi());
+    double_columns.at(Column::kProbeTime).assign(size, result.probe->time().timeAtIpInOut);
 
     const math::XYZTLorentzVector dimuon = result.tag->p4() + result.probe->p4();
-    float_columns.at(Column::kDimuonPt).assign(size, dimuon.pt());
-    float_columns.at(Column::kDimuonMass).assign(size, dimuon.mass());
+    double_columns.at(Column::kDimuonPt).assign(size, dimuon.pt());
+    double_columns.at(Column::kDimuonMass).assign(size, dimuon.mass());
   }
 
   for (const auto& [muon_chamber_match, hit] : result.measurements) {
     const RPCDetId det_id{muon_chamber_match.id};
 
-    float_columns.at(Column::kProbeDXDZ).push_back(muon_chamber_match.dXdZ);
-    float_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
+    double_columns.at(Column::kProbeDXDZ).push_back(muon_chamber_match.dXdZ);
+    double_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
 
     // RPC Detector Information
-    int16_columns.at(Column::kRegion).push_back(det_id.region());
-    int16_columns.at(Column::kRing).push_back(det_id.ring());
-    int16_columns.at(Column::kStation).push_back(det_id.station());
-    int16_columns.at(Column::kSector).push_back(det_id.sector());
-    int16_columns.at(Column::kLayer).push_back(det_id.layer());
-    int16_columns.at(Column::kSubsector).push_back(det_id.subsector());
-    int16_columns.at(Column::kRoll).push_back(det_id.roll());
+    int_columns.at(Column::kRegion).push_back(det_id.region());
+    int_columns.at(Column::kRing).push_back(det_id.ring());
+    int_columns.at(Column::kStation).push_back(det_id.station());
+    int_columns.at(Column::kSector).push_back(det_id.sector());
+    int_columns.at(Column::kLayer).push_back(det_id.layer());
+    int_columns.at(Column::kSubsector).push_back(det_id.subsector());
+    int_columns.at(Column::kRoll).push_back(det_id.roll());
 
     // Hit Information
     bool_columns.at(Column::kIsFiducial).push_back(isFiducial(muon_chamber_match));
@@ -363,34 +354,34 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
       const LocalPoint hit_pos = hit->localPosition();
       const LocalError hit_pos_err = hit->localPositionError();
 
-      const float err_x = std::sqrt(hit_pos_err.xx() + std::pow(muon_chamber_match.xErr, 2));
-      const float err_y = std::sqrt(hit_pos_err.yy() + std::pow(muon_chamber_match.yErr, 2));
+      const double err_x = std::sqrt(hit_pos_err.xx() + std::pow(muon_chamber_match.xErr, 2));
+      const double err_y = std::sqrt(hit_pos_err.yy() + std::pow(muon_chamber_match.yErr, 2));
 
-      const float residual_x = hit_pos.x() - probe_pos.x();
-      const float residual_y = hit_pos.y() - probe_pos.y();
-      const float pull_x = residual_x / std::sqrt(hit_pos_err.xx());
-      const float pull_y = residual_y / std::sqrt(hit_pos_err.yy());
-      const float pull_x_v2 = residual_x / err_x;
-      const float pull_y_v2 = residual_y / err_y;
+      const double residual_x = hit_pos.x() - probe_pos.x();
+      const double residual_y = hit_pos.y() - probe_pos.y();
+      const double pull_x = residual_x / std::sqrt(hit_pos_err.xx());
+      const double pull_y = residual_y / std::sqrt(hit_pos_err.yy());
+      const double pull_x_v2 = residual_x / err_x;
+      const double pull_y_v2 = residual_y / err_y;
 
       int_columns.at(Column::kClusterSize).push_back(hit->clusterSize());
       int_columns.at(Column::kBunchX).push_back(hit->BunchX());
-      float_columns.at(Column::kResidualX).push_back(residual_x);
-      float_columns.at(Column::kResidualY).push_back(residual_y);
-      float_columns.at(Column::kPullX).push_back(pull_x);
-      float_columns.at(Column::kPullY).push_back(pull_y);
-      float_columns.at(Column::kPullXV2).push_back(pull_x_v2);
-      float_columns.at(Column::kPullYV2).push_back(pull_y_v2);
+      double_columns.at(Column::kResidualX).push_back(residual_x);
+      double_columns.at(Column::kResidualY).push_back(residual_y);
+      double_columns.at(Column::kPullX).push_back(pull_x);
+      double_columns.at(Column::kPullY).push_back(pull_y);
+      double_columns.at(Column::kPullXV2).push_back(pull_x_v2);
+      double_columns.at(Column::kPullYV2).push_back(pull_y_v2);
 
     } else {
-      int_columns.at(Column::kClusterSize).push_back(DEFAULT_DOUBLE_VAL);
-      int_columns.at(Column::kBunchX).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kResidualX).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kResidualY).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kPullX).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kPullY).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kPullXV2).push_back(DEFAULT_DOUBLE_VAL);
-      float_columns.at(Column::kPullYV2).push_back(DEFAULT_DOUBLE_VAL);
+      int_columns.at(Column::kClusterSize).push_back(DEFAULT_INT_VAL);
+      int_columns.at(Column::kBunchX).push_back(DEFAULT_INT_VAL);
+      double_columns.at(Column::kResidualX).push_back(DEFAULT_DOUBLE_VAL);
+      double_columns.at(Column::kResidualY).push_back(DEFAULT_DOUBLE_VAL);
+      double_columns.at(Column::kPullX).push_back(DEFAULT_DOUBLE_VAL);
+      double_columns.at(Column::kPullY).push_back(DEFAULT_DOUBLE_VAL);
+      double_columns.at(Column::kPullXV2).push_back(DEFAULT_DOUBLE_VAL);
+      double_columns.at(Column::kPullYV2).push_back(DEFAULT_DOUBLE_VAL);
     }
   } // measurements
 
@@ -400,12 +391,8 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   auto table = std::make_unique<nanoaod::FlatTable>(size, m_name, false, false);
   table->setDoc("RPC Tag & Probe segment efficiency  information");
 
-  for (const auto& [key, name, descr] : FLOAT_COLUMNS) {
-    const auto& vec = float_columns.at(key);
-    addColumn(table, name, vec, descr);
-  }
-  for (const auto& [key, name, descr] : INT16_COLUMNS) {
-    const auto& vec = int16_columns.at(key);
+  for (const auto& [key, name, descr] : DOUBLE_COLUMNS) {
+    const auto& vec = double_columns.at(key);
     addColumn(table, name, vec, descr);
   }
   for (const auto& [key, name, descr] : INT_COLUMNS) {
