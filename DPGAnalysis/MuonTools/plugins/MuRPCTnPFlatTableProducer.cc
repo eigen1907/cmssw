@@ -64,11 +64,10 @@ protected:
 
 private:
   std::set<std::string> findFilterModules(const edm::Event&,
-                                    const edm::Handle<edm::TriggerResults>&);
+                                          const edm::Handle<edm::TriggerResults>&);
 
-  std::vector<math::XYZTLorentzVector> findTriggerObjectsMomenta(
-      const edm::Handle<trigger::TriggerEvent>&,
-      const std::set<std::string>&);
+  std::vector<math::XYZTLorentzVector> findTriggerObjectsMomenta(const edm::Handle<trigger::TriggerEvent>&,
+                                                                 const std::set<std::string>&);
 
   reco::MuonRef findTagMuon(const edm::Handle<reco::MuonCollection>&,
                             const reco::Vertex&,
@@ -80,9 +79,8 @@ private:
 
   bool checkIfMuonIsOutsideRoll(const reco::MuonChamberMatch&);
 
-  std::pair<const RPCRecHit*, double> findClosestHit(
-      const reco::MuonChamberMatch&,
-      const edm::Handle<RPCRecHitCollection>&);
+  std::pair<const RPCRecHit*, double> findClosestHit(const reco::MuonChamberMatch&,
+                                                     const edm::Handle<RPCRecHitCollection>&);
 
   rpctnp::Result performTagAndProbe(const edm::Event&);
 
@@ -90,8 +88,8 @@ private:
   rpctnp::MuonIdType convertStrToMuonIdType(std::string);
 
   bool checkIfMuonPassId(const reco::Muon&,
-                   const reco::Vertex&,
-                   const rpctnp::MuonIdType&);
+                         const reco::Vertex&,
+                         const rpctnp::MuonIdType&);
 
   double computeMuonPFRelIso(const reco::MuonPFIsolation&,
                              const double);
@@ -175,7 +173,7 @@ private:
     // probe
     {Column::kProbePt, "probe_pt", "Probe Muon pT [GeV]"},
     {Column::kProbeEta, "probe_eta", "Probe Muon eta"},
-    {Column::kProbePhi, "probe_phi", "Probe Muon eta"},
+    {Column::kProbePhi, "probe_phi", "Probe Muon phi [rad]"},
     {Column::kProbeTime, "probe_time", "Probe Muon time [s]"},
     {Column::kProbeDXDZ, "probe_dxdz", "Probe Muon dX/dZ"},
     {Column::kProbeDYDZ, "probe_dydz", "Probe Muon dY/dZ"},
@@ -202,7 +200,6 @@ private:
   };
 
   const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
-    //
     {Column::kClusterSize, "cls", "Cluster Size"},
     {Column::kBunchX, "bx", "Bunch Crossing"},
   };
@@ -215,31 +212,31 @@ private:
 
 
 MuRPCTnPFlatTableProducer::MuRPCTnPFlatTableProducer(const edm::ParameterSet& config)
-    : MuBaseFlatTableProducer(config),
-      m_primary_vertex_collection_token{config, consumesCollector(), "primaryVertexCollectionTag"},
-      m_trigger_results_token{config, consumesCollector(), "triggerResultsTag"},
-      m_trigger_event_token{config, consumesCollector(), "triggerEventTag"},
-      m_muon_collection_token{config, consumesCollector(), "muonCollectionTag"},
-      m_rpc_rec_hit_collection_token{config, consumesCollector(), "rpcRecHitCollectionTag"},
-      // tag muon
-      m_tag_muon_min_pt{config.getParameter<double>("tagMuonMinPt")},
-      m_tag_muon_max_abs_eta{config.getParameter<double>("tagMuonMaxAbsEta")},
-      m_tag_muon_id_type{convertStrToMuonIdType(config.getParameter<std::string>("tagMuonIdType"))},
-      m_tag_muon_max_rel_iso{config.getParameter<double>("tagMuonMaxRelIso")},
-      m_tag_muon_trigger_matching_triggers{config.getParameter<std::vector<std::string> >("tagMuonTriggerMatchingPaths")},
-      m_tag_muon_trigger_matching_max_delta_r{config.getParameter<double>("tagMuonTriggerMatchingMaxDeltaR")},
-      m_tag_muon_trigger_matching_max_delta_pt_rel{config.getParameter<double>("tagMuonTriggerMatchingMaxDeltaPtRel")},
-      // probe muon
-      m_probe_muon_min_pt{config.getParameter<double>("probeMuonMinPt")},
-      m_probe_muon_max_abs_eta{config.getParameter<double>("probeMuonMaxAbsEta")},
-      m_probe_muon_id_type{convertStrToMuonIdType(config.getParameter<std::string>("probeMuonIdType"))},
-      // dimuon
-      m_dimuon_check_opposite_sign{config.getParameter<bool>("dimuonCheckOppositeSign")},
-      m_dimuon_min_delta_r{config.getParameter<double>("dimuonMinDeltaR")},
-      m_dimuon_min_mass{config.getParameter<double>("dimuonMinMass")},
-      m_dimuon_max_mass{config.getParameter<double>("dimuonMaxMass")},
-      // non-constant
-      m_rpc_geometry{consumesCollector()} {
+  : MuBaseFlatTableProducer(config),
+    m_primary_vertex_collection_token{config, consumesCollector(), "primaryVertexCollectionTag"},
+    m_trigger_results_token{config, consumesCollector(), "triggerResultsTag"},
+    m_trigger_event_token{config, consumesCollector(), "triggerEventTag"},
+    m_muon_collection_token{config, consumesCollector(), "muonCollectionTag"},
+    m_rpc_rec_hit_collection_token{config, consumesCollector(), "rpcRecHitCollectionTag"},
+    // tag muon
+    m_tag_muon_min_pt{config.getParameter<double>("tagMuonMinPt")},
+    m_tag_muon_max_abs_eta{config.getParameter<double>("tagMuonMaxAbsEta")},
+    m_tag_muon_id_type{convertStrToMuonIdType(config.getParameter<std::string>("tagMuonIdType"))},
+    m_tag_muon_max_rel_iso{config.getParameter<double>("tagMuonMaxRelIso")},
+    m_tag_muon_trigger_matching_triggers{config.getParameter<std::vector<std::string> >("tagMuonTriggerMatchingPaths")},
+    m_tag_muon_trigger_matching_max_delta_r{config.getParameter<double>("tagMuonTriggerMatchingMaxDeltaR")},
+    m_tag_muon_trigger_matching_max_delta_pt_rel{config.getParameter<double>("tagMuonTriggerMatchingMaxDeltaPtRel")},
+    // probe muon
+    m_probe_muon_min_pt{config.getParameter<double>("probeMuonMinPt")},
+    m_probe_muon_max_abs_eta{config.getParameter<double>("probeMuonMaxAbsEta")},
+    m_probe_muon_id_type{convertStrToMuonIdType(config.getParameter<std::string>("probeMuonIdType"))},
+    // dimuon
+    m_dimuon_check_opposite_sign{config.getParameter<bool>("dimuonCheckOppositeSign")},
+    m_dimuon_min_delta_r{config.getParameter<double>("dimuonMinDeltaR")},
+    m_dimuon_min_mass{config.getParameter<double>("dimuonMinMass")},
+    m_dimuon_max_mass{config.getParameter<double>("dimuonMaxMass")},
+    // non-constant
+    m_rpc_geometry{consumesCollector()} {
   produces<nanoaod::FlatTable>();
 }
 
@@ -273,7 +270,6 @@ void MuRPCTnPFlatTableProducer::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add<double>("dimuonMinMass", 70.0);
   desc.add<double>("dimuonMaxMass", 110.0);
 
-  desc.setAllowAnything();
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -345,7 +341,6 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
 
   for (const auto& [muon_chamber_match, hit] : result.measurements) {
     const RPCDetId det_id{muon_chamber_match.id};
-    const RPCGeomServ geom_serv{det_id};
 
     float_columns.at(Column::kProbeDXDZ).push_back(muon_chamber_match.dXdZ);
     float_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
@@ -367,7 +362,7 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
       const LocalPoint probe_pos{muon_chamber_match.x, muon_chamber_match.y, 0.f};
       const LocalPoint hit_pos = hit->localPosition();
       const LocalError hit_pos_err = hit->localPositionError();
-      //
+
       const float err_x = std::sqrt(hit_pos_err.xx() + std::pow(muon_chamber_match.xErr, 2));
       const float err_y = std::sqrt(hit_pos_err.yy() + std::pow(muon_chamber_match.yErr, 2));
 
@@ -428,63 +423,100 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
 
 // Returns a set of favourite and fired HLT filter module names.
 // See https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideHLTAnalysis
-// TODO support wildcards like "HLT_IsoMu2*"
-std::set<std::string> MuRPCTnPFlatTableProducer::findFilterModules(const edm::Event& event,
-                                                             const edm::Handle<edm::TriggerResults>& trigger_results_handle) {
+// Supported wildcards patterns:
+//   - exact match   : "HLT_IsoMu24"
+//   - prefix match  : "HLT_IsoMu*"
+std::set<std::string>
+MuRPCTnPFlatTableProducer::findFilterModules(
+  const edm::Event& event,
+  const edm::Handle<edm::TriggerResults>& trigger_results_handle) {
 
-  // FIXME rename
-  std::set<std::string> module_set;
+  std::set<std::string> filter_module_set;
 
   const std::vector<std::string>& trigger_vec = event.triggerNames(*trigger_results_handle).triggerNames();
 
-  for (size_t idx = 0; idx < trigger_vec.size(); ++idx) {
-    if (not trigger_results_handle->accept(idx) ) {
+  for (size_t trigger_idx = 0; trigger_idx < trigger_vec.size(); ++trigger_idx) {
+    if (!trigger_results_handle->accept(trigger_idx)) {
       continue;
     }
-    const std::string trigger = m_hlt_config_provider.removeVersion(trigger_vec.at(idx));
-    const std::vector<std::string>& module_vec = m_hlt_config_provider.saveTagsModules(idx);
 
-    for (size_t favourite_idx = 0; favourite_idx < m_tag_muon_trigger_matching_triggers.size(); ++favourite_idx) {
-      const std::string favourite_trigger = m_tag_muon_trigger_matching_triggers.at(favourite_idx);
-      if (trigger == favourite_trigger) {
-        module_set.insert(module_vec.begin(), module_vec.end());
+    const std::string trigger = m_hlt_config_provider.removeVersion(trigger_vec.at(trigger_idx));
+
+    bool is_target_trigger = false;
+    for (size_t target_trigger_idx = 0; target_trigger_idx < m_tag_muon_trigger_matching_triggers.size(); ++target_trigger_idx) {
+      const std::string& target_trigger = m_tag_muon_trigger_matching_triggers.at(target_trigger_idx);
+
+      const std::size_t star_pos = target_trigger.find('*');
+
+      if (star_pos == std::string::npos) {
+        if (trigger == target_trigger) {
+          is_target_trigger = true;
+          break;
+        }
+      } else if (
+        star_pos == target_trigger.size() - 1 && 
+        target_trigger.find('*', star_pos + 1) == std::string::npos) {
+        const std::string prefix = target_trigger.substr(0, star_pos);
+        if (trigger.compare(0, prefix.size(), prefix) == 0) {
+          is_target_trigger = true;
+          break;
+        }
       }
-    } // target trigger
-  } // trigger
-  return module_set;
+    }
+
+    if (!is_target_trigger) {
+      continue;
+    }
+
+    const std::vector<std::string>& filter_module_vec = m_hlt_config_provider.saveTagsModules(trigger_idx);
+    filter_module_set.insert(filter_module_vec.begin(), filter_module_vec.end());
+
+    LogDebug("") << "matched HLT path: " << trigger << ", filters: " << filter_module_vec.size();
+  }
+
+  LogDebug("") << "selected filters: " << filter_module_set.size();
+
+  return filter_module_set;
 }
+
 
 // Returns trigger objects' four momenta
 std::vector<math::XYZTLorentzVector>
 MuRPCTnPFlatTableProducer::findTriggerObjectsMomenta(
-    const edm::Handle<trigger::TriggerEvent>& trigger_event_handle,
-    const std::set<std::string>& filter_module_set) {
+  const edm::Handle<trigger::TriggerEvent>& trigger_event_handle,
+  const std::set<std::string>& filter_module_set) {
 
-  std::vector<math::XYZTLorentzVector> momenta;
+  std::vector<math::XYZTLorentzVector> trigger_object_momentum_vec;
 
   const trigger::TriggerObjectCollection& trigger_object_collection = trigger_event_handle->getObjects();
 
   for (trigger::size_type module_idx = 0; module_idx < trigger_event_handle->sizeFilters(); ++module_idx) {
-    std::string filter_label = std::string(trigger_event_handle->filterLabel(module_idx));
+    const std::string filter_label = std::string(trigger_event_handle->filterLabel(module_idx));
 
     if (filter_module_set.count(filter_label) == 0) {
-      // TODO LogDebug
+      LogDebug("") << "skipped filter: " << filter_label;
       continue;
     }
 
-    for (const trigger::size_type key : trigger_event_handle->filterKeys(module_idx)) {
-      momenta.push_back(trigger_object_collection.at(key).particle().p4());
+    const trigger::Keys& key_vec = trigger_event_handle->filterKeys(module_idx);
+
+    LogDebug("") << "matched filter: " << filter_label << ", objects: " << key_vec.size();
+
+    for (const trigger::size_type key : key_vec) {
+      trigger_object_momentum_vec.push_back(trigger_object_collection.at(key).particle().p4());
     }
   }
 
-  return momenta;
+  LogDebug("") << "collected trigger objects: " << trigger_object_momentum_vec.size();
+
+  return trigger_object_momentum_vec;
 }
 
 // Returns a tag muon
 reco::MuonRef MuRPCTnPFlatTableProducer::findTagMuon(
-    const edm::Handle<reco::MuonCollection>& muon_collection_handle,
-    const reco::Vertex& primary_vertex,
-    const std::vector<math::XYZTLorentzVector>& trigger_object_momentum_vec) {
+  const edm::Handle<reco::MuonCollection>& muon_collection_handle,
+  const reco::Vertex& primary_vertex,
+  const std::vector<math::XYZTLorentzVector>& trigger_object_momentum_vec) {
 
   reco::MuonRef tag_muon;
   for (size_t muon_idx = 0; muon_idx < muon_collection_handle->size(); ++muon_idx) {
@@ -514,9 +546,9 @@ reco::MuonRef MuRPCTnPFlatTableProducer::findTagMuon(
 
 // Returns a probe muon
 reco::MuonRef MuRPCTnPFlatTableProducer::findProbeMuon(
-    const edm::Handle<reco::MuonCollection>& muon_collection_handle,
-    const reco::Vertex& primary_vertex,
-    const reco::MuonRef& tag_muon) {
+  const edm::Handle<reco::MuonCollection>& muon_collection_handle,
+  const reco::Vertex& primary_vertex,
+  const reco::MuonRef& tag_muon) {
 
   reco::MuonRef probe_muon;
 
@@ -569,7 +601,7 @@ bool MuRPCTnPFlatTableProducer::checkIfMuonIsOutsideRoll(const reco::MuonChamber
 // TODO delta phi?
 std::pair<const RPCRecHit*, double>
 MuRPCTnPFlatTableProducer::findClosestHit(const reco::MuonChamberMatch& muon_chamber_match,
-                                   const edm::Handle<RPCRecHitCollection>& rpc_rec_hit_collection_handle) {
+                                          const edm::Handle<RPCRecHitCollection>& rpc_rec_hit_collection_handle) {
   const RPCDetId rpc_id{muon_chamber_match.id};
   const RPCRoll* roll = m_rpc_geometry->roll(rpc_id);
   if (roll == nullptr) {
@@ -638,8 +670,7 @@ rpctnp::Result MuRPCTnPFlatTableProducer::performTagAndProbe(const edm::Event& e
     return result;
   }
 
-  result.tag = findTagMuon(muon_collection_handle, primary_vertex,
-                                trigger_object_momentum_vec);
+  result.tag = findTagMuon(muon_collection_handle, primary_vertex, trigger_object_momentum_vec);
   if (result.tag.isNull()) {
     LogDebug("") << "no tag muon";
     return result;
@@ -704,8 +735,8 @@ double MuRPCTnPFlatTableProducer::computeMuonPFRelIso(const reco::MuonPFIsolatio
 
 // Returns a boolean indicating whether the tag muon is the triggering muon.
 bool MuRPCTnPFlatTableProducer::doTriggerMatching(
-    const reco::Muon& mu,
-    const std::vector<math::XYZTLorentzVector>& trigger_object_momentum_vec) {
+  const reco::Muon& mu,
+  const std::vector<math::XYZTLorentzVector>& trigger_object_momentum_vec) {
 
   bool found = false;
   for (const auto& trigger_object_p4 : trigger_object_momentum_vec) {
