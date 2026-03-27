@@ -15,9 +15,20 @@
   <class name="edm::ClonePolicy<RPCRecHit>" /> <!-- Root6 -->
   <class name="edm::RangeMap<RPCDetId, edm::OwnVector<RPCRecHit, edm::ClonePolicy<RPCRecHit> >, edm::ClonePolicy<RPCRecHit> >" splitLevel="0"/>
   <class name="edm::Wrapper<edm::RangeMap<RPCDetId, edm::OwnVector<RPCRecHit, edm::ClonePolicy<RPCRecHit> >, edm::ClonePolicy<RPCRecHit> > >" splitLevel="0"/>
+  
+  <class name="RPCRecHitPhase2" splitLevel="0"/>
+  <class name="std::vector<RPCRecHitPhase2>" splitLevel="0"/>
+  <class name="std::vector<RPCRecHitPhase2*>" splitLevel="0"/>
+  <class name="edm::OwnVector<RPCRecHitPhase2, edm::ClonePolicy<RPCRecHitPhase2> >" splitLevel="0" rntupleStreamerMode="true"/>
+  <class name="edm::ClonePolicy<RPCRecHitPhase2>" />
+  <class name="edm::RangeMap<RPCDetId, edm::OwnVector<RPCRecHitPhase2, edm::ClonePolicy<RPCRecHitPhase2> >, edm::ClonePolicy<RPCRecHitPhase2> >" splitLevel="0"/>
+  <class name="edm::Wrapper<edm::RangeMap<RPCDetId, edm::OwnVector<RPCRecHitPhase2, edm::ClonePolicy<RPCRecHitPhase2> >, edm::ClonePolicy<RPCRecHitPhase2> > >" splitLevel="0"/>
 </selection>
 <exclusion>
   <class name="edm::OwnVector<RPCRecHit, edm::ClonePolicy<RPCRecHit> >">
+    <method name="sort" splitLevel="0"/>
+  </class>
+  <class name="edm::OwnVector<RPCRecHitPhase2, edm::ClonePolicy<RPCRecHitPhase2> >">
     <method name="sort" splitLevel="0"/>
   </class>
 </exclusion>
