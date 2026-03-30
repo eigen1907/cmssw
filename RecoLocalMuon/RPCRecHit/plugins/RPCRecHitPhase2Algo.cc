@@ -1,5 +1,19 @@
 #include "RecoLocalMuon/RPCRecHit/plugins/RPCRecHitPhase2Algo.h"
-#include "Geometry/CommonTopologies/interface/TrapezoidalStripTopology.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace {
+  inline float clusterCenterX(const RPCRoll& roll, int firstStrip, int lastStrip) {
+    const float x1 = roll.centreOfStrip(firstStrip).x();
+    const float x2 = roll.centreOfStrip(lastStrip).x();
+    return 0.5f * (x1 + x2);
+  }
+
+  inline float clusterMiddleStrip(int firstStrip, int lastStrip) {
+    return 0.5f * (static_cast<float>(firstStrip) + static_cast<float>(lastStrip));
+  }
+}  // namespace
 
 bool RPCRecHitPhase2Algo::compute(const RPCRoll& roll,
                                   const RPCClusterPhase2& cluster,
@@ -7,40 +21,42 @@ bool RPCRecHitPhase2Algo::compute(const RPCRoll& roll,
                                   LocalError& error,
                                   float& time,
                                   float& timeErr) const {
-  const float fstrip = roll.centreOfStrip(cluster.firstStrip()).x();
-  const float lstrip = roll.centreOfStrip(cluster.lastStrip()).x();
-  const float centreOfCluster = 0.5f * (fstrip + lstrip);
+  const float x = clusterCenterX(roll, cluster.firstStrip(), cluster.lastStrip());
+  point = LocalPoint(x, 0.f, 0.f);
 
-  const double y = cluster.hasY() ? cluster.y() : 0.0;
-  point = LocalPoint(centreOfCluster, y, 0.0);
-
-  if (!cluster.hasY()) {
-    error = LocalError(roll.localError((cluster.firstStrip() + cluster.lastStrip()) / 2.0));
-  } else {
-    float ex2 = roll.localError((cluster.firstStrip() + cluster.lastStrip()) / 2.0).xx();
-
-    const float stripLen = roll.specificTopology().stripLength();
-    const float maxDy = stripLen / 2.f - std::abs(cluster.y());
-
-    if (roll.id().region() != 0) {
-      const auto& topo = dynamic_cast<const TrapezoidalStripTopology&>(roll.topology());
-      const double angle = topo.stripAngle((cluster.firstStrip() + cluster.lastStrip()) / 2.0);
-      const double x = centreOfCluster - y * std::tan(angle);
-
-      point = LocalPoint(x, y, 0.0);
-
-      const double scale = topo.localPitch(point) / topo.pitch();
-      ex2 *= scale * scale;
-    }
-
-    error = LocalError(ex2, 0.f, maxDy * maxDy / 3.f);
-  }
+  // Legacy-like minimal behavior for RPCPhase2:
+  // keep the same strip-center logic as standard RPC reco.
+  error = roll.localError(clusterMiddleStrip(cluster.firstStrip(), cluster.lastStrip()));
 
   if (cluster.hasTime()) {
     time = cluster.time();
     timeErr = cluster.timeRMS();
   } else {
-    // FIXME: once Phase2 timing convention is fixed, revisit whether "0, -1" is still the best default.
+    time = 0.f;
+    timeErr = -1.f;
+  }
+
+  return true;
+}
+
+bool RPCRecHitPhase2Algo::compute(const RPCRoll& roll,
+                                  const IRPCCluster& cluster,
+                                  LocalPoint& point,
+                                  LocalError& error,
+                                  float& time,
+                                  float& timeErr) const {
+  const float x = clusterCenterX(roll, cluster.firstStrip(), cluster.lastStrip());
+  const float y = cluster.hasY() ? cluster.y() : 0.f;
+  point = LocalPoint(x, y, 0.f);
+
+  const float ex2 = roll.localError(clusterMiddleStrip(cluster.firstStrip(), cluster.lastStrip())).xx();
+  const float ey = cluster.hasY() ? std::max(cluster.yRMS(), 0.1f) : 0.1f;
+  error = LocalError(ex2, 0.f, ey * ey);
+
+  if (cluster.hasTime()) {
+    time = cluster.time();
+    timeErr = cluster.timeRMS();
+  } else {
     time = 0.f;
     timeErr = -1.f;
   }
@@ -56,18 +72,24 @@ RPCRecHitPhase2 RPCRecHitPhase2Algo::build(const RPCRoll& roll,
   float time = 0.f;
   float timeErr = -1.f;
 
-  const bool ok = compute(roll, cluster, point, error, time, timeErr);
+  compute(roll, cluster, point, error, time, timeErr);
 
-  // FIXME: decide whether to throw, skip, or return a default-constructed hit on compute failure.
-  (void)ok;
+  RPCRecHitPhase2 recHit(rpcId, cluster.bx(), cluster.firstStrip(), cluster.clusterSize(), point, error);
+  recHit.setTimeAndError(time, timeErr);
+  return recHit;
+}
 
-  RPCRecHitPhase2 hit(rpcId,
-                      cluster.bx(),
-                      cluster.firstStrip(),
-                      cluster.clusterSize(),
-                      point,
-                      error);
+RPCRecHitPhase2 RPCRecHitPhase2Algo::build(const RPCRoll& roll,
+                                           const RPCDetId& rpcId,
+                                           const IRPCCluster& cluster) const {
+  LocalPoint point;
+  LocalError error;
+  float time = 0.f;
+  float timeErr = -1.f;
 
-  hit.setTimeAndError(time, timeErr);
-  return hit;
+  compute(roll, cluster, point, error, time, timeErr);
+
+  RPCRecHitPhase2 recHit(rpcId, cluster.bx(), cluster.firstStrip(), cluster.clusterSize(), point, error);
+  recHit.setTimeAndError(time, timeErr);
+  return recHit;
 }

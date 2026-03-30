@@ -1,12 +1,17 @@
-#include "RPCClusterizerPhase2.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/RPCClusterizerPhase2.h"
+
+#include "DataFormats/RPCDigi/interface/RPCDigiPhase2Time.h"
+
+#include <iterator>
 
 RPCClusterPhase2Container RPCClusterizerPhase2::doAction(const RPCDigiPhase2Collection::Range& digiRange,
                                                          const RollMask& mask) const {
-  RPCClusterPhase2Container initial = makeInitialClusters(digiRange);
+  const RPCClusterPhase2Container initial = makeInitialClusters(digiRange);
   return reclusterWithMask(initial, mask);
 }
 
-RPCClusterPhase2Container RPCClusterizerPhase2::makeInitialClusters(const RPCDigiPhase2Collection::Range& digiRange) const {
+RPCClusterPhase2Container RPCClusterizerPhase2::makeInitialClusters(
+    const RPCDigiPhase2Collection::Range& digiRange) const {
   RPCClusterPhase2Container initialClusters;
   RPCClusterPhase2Container finalClusters;
 
@@ -17,13 +22,12 @@ RPCClusterPhase2Container RPCClusterizerPhase2::makeInitialClusters(const RPCDig
   for (auto digi = digiRange.first; digi != digiRange.second; ++digi) {
     RPCClusterPhase2 cl(digi->strip(), digi->strip(), digi->bx());
 
-    // FIXME: define how RPCDigiPhase2 sub-BX timing should be propagated to cluster time.
-    // FIXME: once RPCDigiPhase2 API is frozen, convert sbx/fine timing into the cluster time observable here.
-    // Example sketch:
-    //   cl.addTime(convertPhase2Timing(*digi));
-
-    // FIXME: existing Phase2 RPC digi may not provide local-y information.
-    // Keep local-y empty for now.
+    // Skeleton-only hook:
+    // touch the Phase2 timing helper so the input contract is already wired,
+    // but intentionally do not use it yet in the actual recHit logic.
+    RPCDigiPhase2Time phase2Time(*digi);
+    const float dummyTime = phase2Time.time();
+    (void)dummyTime;
 
     initialClusters.insert(cl);
   }
@@ -49,11 +53,12 @@ RPCClusterPhase2Container RPCClusterizerPhase2::makeInitialClusters(const RPCDig
 RPCClusterPhase2Container RPCClusterizerPhase2::reclusterWithMask(const RPCClusterPhase2Container& input,
                                                                   const RollMask& mask) const {
   RPCClusterPhase2Container output;
-  if (input.empty()) return output;
+  if (input.empty()) {
+    return output;
+  }
 
   auto left = input.begin();
   auto right = std::next(left);
-
   RPCClusterPhase2 current = *left;
 
   while (right != input.end()) {
@@ -73,12 +78,17 @@ RPCClusterPhase2Container RPCClusterizerPhase2::reclusterWithMask(const RPCClust
 bool RPCClusterizerPhase2::canMergeAcrossMaskedGap(const RPCClusterPhase2& left,
                                                    const RPCClusterPhase2& right,
                                                    const RollMask& mask) const {
-  if (left.bx() != right.bx()) return false;
-  if (right.firstStrip() - left.lastStrip() != 2) return false;
+  if (left.bx() != right.bx()) {
+    return false;
+  }
+  if (right.firstStrip() - left.lastStrip() != 2) {
+    return false;
+  }
 
   const int maskedStrip = left.lastStrip() + 1;
+  if (maskedStrip <= 0 || maskedStrip > static_cast<int>(mask.size())) {
+    return false;
+  }
 
-  // NOTE: RollMask is 0-based while strip numbering is 1-based in RPC.
-  // This is the same convention used by the legacy producer when filling the mask bitset.
   return mask.test(maskedStrip - 1);
 }

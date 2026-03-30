@@ -1,13 +1,13 @@
-#ifndef RecoLocalMuon_RPCClusterPhase2_h
-#define RecoLocalMuon_RPCClusterPhase2_h
+#ifndef RecoLocalMuon_IRPCCluster_h
+#define RecoLocalMuon_IRPCCluster_h
 
 #include <cstdint>
 
-class RPCClusterPhase2 {
+class IRPCCluster {
 public:
-  RPCClusterPhase2();
-  RPCClusterPhase2(int firstStrip, int lastStrip, int bx);
-  ~RPCClusterPhase2();
+  IRPCCluster();
+  IRPCCluster(int firstStrip, int lastStrip, int bx);
+  ~IRPCCluster();
 
   int firstStrip() const;
   int lastStrip() const;
@@ -24,11 +24,11 @@ public:
 
   void addTime(float time);
   void addY(float y);
-  void merge(const RPCClusterPhase2& other);
+  void merge(const IRPCCluster& other);
 
-  bool operator<(const RPCClusterPhase2& other) const;
-  bool operator==(const RPCClusterPhase2& other) const;
-  bool isAdjacent(const RPCClusterPhase2& other) const;
+  bool operator<(const IRPCCluster& other) const;
+  bool operator==(const IRPCCluster& other) const;
+  bool isAdjacent(const IRPCCluster& other) const;
 
 private:
   uint16_t fstrip_;

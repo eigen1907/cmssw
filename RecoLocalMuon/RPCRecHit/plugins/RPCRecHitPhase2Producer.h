@@ -1,6 +1,8 @@
 #ifndef RecoLocalMuon_RPCRecHitPhase2Producer_h
 #define RecoLocalMuon_RPCRecHitPhase2Producer_h
 
+#include <memory>
+
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -20,9 +22,13 @@
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 
-#include "RPCClusterizerPhase2.h"
-#include "RPCRecHitPhase2Algo.h"
-#include "RPCRollMask.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/RPCRollMask.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/RPCClusterizerPhase2.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/IRPCClusterizer.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/RPCRecHitPhase2Algo.h"
+
+class RPCRoll;
+class RPCDetId;
 
 class RPCRecHitPhase2Producer : public edm::stream::EDProducer<> {
 public:
@@ -35,8 +41,6 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  enum class MaskSource { File, EventSetup };
-
   RollMask buildMaskForRoll(const RPCDetId& rpcId) const;
 
   void buildFromRPCPhase2(const RPCRoll& roll,
@@ -58,13 +62,12 @@ private:
   edm::ESGetToken<RPCGeometry, MuonGeometryRecord> rpcGeomToken_;
 
   bool useIRPC_;
-  MaskSource maskSource_;
-  MaskSource deadSource_;
 
   std::unique_ptr<RPCMaskedStrips> rpcMaskedStripsObj_;
   std::unique_ptr<RPCDeadStrips> rpcDeadStripsObj_;
 
-  RPCClusterizerPhase2 clusterizer_;
+  RPCClusterizerPhase2 rpcClusterizer_;
+  IRPCClusterizer irpcClusterizer_;
   RPCRecHitPhase2Algo algo_;
 };
 

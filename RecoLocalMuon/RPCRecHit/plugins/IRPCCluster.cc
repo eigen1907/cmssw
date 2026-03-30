@@ -1,12 +1,12 @@
-#include "RecoLocalMuon/RPCRecHit/plugins/RPCClusterPhase2.h"
+#include "RecoLocalMuon/RPCRecHit/plugins/IRPCCluster.h"
 
 #include <algorithm>
 #include <cmath>
 
-RPCClusterPhase2::RPCClusterPhase2()
+IRPCCluster::IRPCCluster()
     : fstrip_(0), lstrip_(0), bx_(0), sumTime_(0.f), sumTime2_(0.f), nTime_(0), sumY_(0.f), sumY2_(0.f), nY_(0) {}
 
-RPCClusterPhase2::RPCClusterPhase2(int firstStrip, int lastStrip, int bx)
+IRPCCluster::IRPCCluster(int firstStrip, int lastStrip, int bx)
     : fstrip_(firstStrip),
       lstrip_(lastStrip),
       bx_(bx),
@@ -17,17 +17,17 @@ RPCClusterPhase2::RPCClusterPhase2(int firstStrip, int lastStrip, int bx)
       sumY2_(0.f),
       nY_(0) {}
 
-RPCClusterPhase2::~RPCClusterPhase2() = default;
+IRPCCluster::~IRPCCluster() = default;
 
-int RPCClusterPhase2::firstStrip() const { return fstrip_; }
-int RPCClusterPhase2::lastStrip() const { return lstrip_; }
-int RPCClusterPhase2::clusterSize() const { return lstrip_ - fstrip_ + 1; }
-int RPCClusterPhase2::bx() const { return bx_; }
+int IRPCCluster::firstStrip() const { return fstrip_; }
+int IRPCCluster::lastStrip() const { return lstrip_; }
+int IRPCCluster::clusterSize() const { return lstrip_ - fstrip_ + 1; }
+int IRPCCluster::bx() const { return bx_; }
 
-bool RPCClusterPhase2::hasTime() const { return nTime_ > 0; }
-float RPCClusterPhase2::time() const { return hasTime() ? sumTime_ / nTime_ : 0.f; }
+bool IRPCCluster::hasTime() const { return nTime_ > 0; }
+float IRPCCluster::time() const { return hasTime() ? sumTime_ / nTime_ : 0.f; }
 
-float RPCClusterPhase2::timeRMS() const {
+float IRPCCluster::timeRMS() const {
   if (!hasTime()) {
     return -1.f;
   }
@@ -35,10 +35,10 @@ float RPCClusterPhase2::timeRMS() const {
   return std::sqrt(variance);
 }
 
-bool RPCClusterPhase2::hasY() const { return nY_ > 0; }
-float RPCClusterPhase2::y() const { return hasY() ? sumY_ / nY_ : 0.f; }
+bool IRPCCluster::hasY() const { return nY_ > 0; }
+float IRPCCluster::y() const { return hasY() ? sumY_ / nY_ : 0.f; }
 
-float RPCClusterPhase2::yRMS() const {
+float IRPCCluster::yRMS() const {
   if (!hasY()) {
     return -1.f;
   }
@@ -46,19 +46,19 @@ float RPCClusterPhase2::yRMS() const {
   return std::sqrt(variance);
 }
 
-void RPCClusterPhase2::addTime(float time) {
+void IRPCCluster::addTime(float time) {
   ++nTime_;
   sumTime_ += time;
   sumTime2_ += time * time;
 }
 
-void RPCClusterPhase2::addY(float y) {
+void IRPCCluster::addY(float y) {
   ++nY_;
   sumY_ += y;
   sumY2_ += y * y;
 }
 
-void RPCClusterPhase2::merge(const RPCClusterPhase2& other) {
+void IRPCCluster::merge(const IRPCCluster& other) {
   const int first = std::min(firstStrip(), other.firstStrip());
   const int last  = std::max(lastStrip(), other.lastStrip());
 
@@ -74,17 +74,17 @@ void RPCClusterPhase2::merge(const RPCClusterPhase2& other) {
   sumY2_ += other.sumY2_;
 }
 
-bool RPCClusterPhase2::operator<(const RPCClusterPhase2& other) const {
+bool IRPCCluster::operator<(const IRPCCluster& other) const {
   if (bx_ != other.bx()) {
     return bx_ < other.bx();
   }
   return firstStrip() < other.firstStrip();
 }
 
-bool RPCClusterPhase2::operator==(const RPCClusterPhase2& other) const {
+bool IRPCCluster::operator==(const IRPCCluster& other) const {
   return bx_ == other.bx() && firstStrip() == other.firstStrip() && clusterSize() == other.clusterSize();
 }
 
-bool RPCClusterPhase2::isAdjacent(const RPCClusterPhase2& other) const {
+bool IRPCCluster::isAdjacent(const IRPCCluster& other) const {
   return (other.lastStrip() + 1 == this->firstStrip()) && (other.bx() == this->bx());
 }
