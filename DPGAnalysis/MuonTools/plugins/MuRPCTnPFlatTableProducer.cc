@@ -34,6 +34,13 @@
 
 #include "DataFormats/Math/interface/deltaR.h"
 
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrack.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
+#include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
+
 
 namespace rpctnp {
   enum class MuonIdType {
@@ -123,6 +130,10 @@ private:
   const double m_dimuon_min_mass;
   const double m_dimuon_max_mass;
 
+  const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> m_transient_track_builder_token;
+  const edm::ESGetToken<Propagator, TrackingComponentsRecord> m_propagator_token;
+  const TransientTrackBuilder* m_transient_track_builder;
+  const Propagator* m_propagator;
   nano_mu::ESTokenHandle<RPCGeometry, MuonGeometryRecord, edm::Transition::BeginRun> m_rpc_geometry;
   HLTConfigProvider m_hlt_config_provider;
 
@@ -136,8 +147,14 @@ private:
     kProbeEta,
     kProbePhi,
     kProbeTime,
-    kProbeDXDZ,
-    kProbeDYDZ,
+    // probe crossing
+    kProbeCrossingPt,
+    kProbeCrossingEta,
+    kProbeCrossingPhi,
+    kProbeCrossingDXDZ,
+    kProbeCrossingDYDZ,
+    kProbeCrossingLocalX,
+    kProbeCrossingLocalY,
     // dimuon
     kDimuonPt,
     kDimuonMass,
@@ -175,8 +192,14 @@ private:
     {Column::kProbeEta, "probe_eta", "Probe Muon eta"},
     {Column::kProbePhi, "probe_phi", "Probe Muon phi [rad]"},
     {Column::kProbeTime, "probe_time", "Probe Muon time [s]"},
-    {Column::kProbeDXDZ, "probe_dxdz", "Probe Muon dX/dZ"},
-    {Column::kProbeDYDZ, "probe_dydz", "Probe Muon dY/dZ"},
+    // probe crossing
+    {Column::kProbeCrossingPt, "probe_crossing_pt", "Probe crossing pT [GeV]"},
+    {Column::kProbeCrossingEta, "probe_crossing_eta", "Probe crossing eta"},
+    {Column::kProbeCrossingPhi, "probe_crossing_phi", "Probe crossing phi [rad]"},
+    {Column::kProbeCrossingDXDZ, "probe_crossing_dxdz", "Probe crossing dX/dZ"},
+    {Column::kProbeCrossingDYDZ, "probe_crossing_dydz", "Probe crossing dY/dZ"},
+    {Column::kProbeCrossingLocalX, "probe_crossing_local_x", "Probe crossing local x [cm]"},
+    {Column::kProbeCrossingLocalY, "probe_crossing_local_y", "Probe crossing local y [cm]"},
     // dimuon
     {Column::kDimuonPt, "dimuon_pt", "Tag+Probe pT [GeV]"},
     {Column::kDimuonMass, "dimuon_mass", "Tag+Probe mass [GeV]"},
@@ -233,6 +256,10 @@ MuRPCTnPFlatTableProducer::MuRPCTnPFlatTableProducer(const edm::ParameterSet& co
     m_dimuon_min_delta_r{config.getParameter<double>("dimuonMinDeltaR")},
     m_dimuon_min_mass{config.getParameter<double>("dimuonMinMass")},
     m_dimuon_max_mass{config.getParameter<double>("dimuonMaxMass")},
+    m_transient_track_builder_token{esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))},
+    m_propagator_token{esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))},
+    m_transient_track_builder{nullptr},
+    m_propagator{nullptr},
     // non-constant
     m_rpc_geometry{consumesCollector()} {
   produces<nanoaod::FlatTable>();
@@ -279,6 +306,8 @@ void MuRPCTnPFlatTableProducer::getFromES(const edm::Run& run, const edm::EventS
 }
 
 void MuRPCTnPFlatTableProducer::getFromES(const edm::EventSetup& environment) {
+  m_transient_track_builder = &environment.getData(m_transient_track_builder_token);
+  m_propagator = &environment.getData(m_propagator_token);
 }
 
 void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
@@ -333,8 +362,31 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   for (const auto& [muon_chamber_match, hit] : result.measurements) {
     const RPCDetId det_id{muon_chamber_match.id};
 
-    double_columns.at(Column::kProbeDXDZ).push_back(muon_chamber_match.dXdZ);
-    double_columns.at(Column::kProbeDYDZ).push_back(muon_chamber_match.dYdZ);
+    double crossing_pt = DEFAULT_DOUBLE_VAL;
+    double crossing_eta = DEFAULT_DOUBLE_VAL;
+    double crossing_phi = DEFAULT_DOUBLE_VAL;
+
+    const RPCRoll* roll = m_rpc_geometry->roll(det_id);
+    const reco::Track* best_track = result.probe.isNonnull() ? result.probe->bestTrack() : nullptr;
+    if (roll != nullptr && best_track != nullptr && m_transient_track_builder != nullptr && m_propagator != nullptr) {
+      const reco::TransientTrack transient_track = m_transient_track_builder->build(best_track);
+      const TrajectoryStateOnSurface tsos = m_propagator->propagate(transient_track.impactPointTSCP().theState(),
+                                                                    roll->surface());
+      if (tsos.isValid()) {
+        const GlobalVector crossing_momentum = tsos.globalMomentum();
+        crossing_pt = crossing_momentum.perp();
+        crossing_eta = crossing_momentum.eta();
+        crossing_phi = crossing_momentum.phi();
+      }
+    }
+
+    double_columns.at(Column::kProbeCrossingPt).push_back(crossing_pt);
+    double_columns.at(Column::kProbeCrossingEta).push_back(crossing_eta);
+    double_columns.at(Column::kProbeCrossingPhi).push_back(crossing_phi);
+    double_columns.at(Column::kProbeCrossingDXDZ).push_back(muon_chamber_match.dXdZ);
+    double_columns.at(Column::kProbeCrossingDYDZ).push_back(muon_chamber_match.dYdZ);
+    double_columns.at(Column::kProbeCrossingLocalX).push_back(muon_chamber_match.x);
+    double_columns.at(Column::kProbeCrossingLocalY).push_back(muon_chamber_match.y);
 
     // RPC Detector Information
     int_columns.at(Column::kRegion).push_back(det_id.region());
@@ -441,7 +493,7 @@ MuRPCTnPFlatTableProducer::findFilterModules(
           break;
         }
       } else if (
-        star_pos == target_trigger.size() - 1 && 
+        star_pos == target_trigger.size() - 1 &&
         target_trigger.find('*', star_pos + 1) == std::string::npos) {
         const std::string prefix = target_trigger.substr(0, star_pos);
         if (trigger.compare(0, prefix.size(), prefix) == 0) {
