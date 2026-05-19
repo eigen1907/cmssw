@@ -124,11 +124,11 @@ private:
   const double m_probe_muon_min_pt;
   const double m_probe_muon_max_abs_eta;
   const rpctnp::MuonIdType m_probe_muon_id_type;
-  //// dimuon
-  const bool m_dimuon_check_opposite_sign;
-  const double m_dimuon_min_delta_r;
-  const double m_dimuon_min_mass;
-  const double m_dimuon_max_mass;
+  //// muon pair
+  const bool m_pair_check_opposite_sign;
+  const double m_pair_min_delta_r;
+  const double m_pair_min_mass;
+  const double m_pair_max_mass;
 
   const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> m_transient_track_builder_token;
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> m_propagator_token;
@@ -147,17 +147,17 @@ private:
     kProbeEta,
     kProbePhi,
     kProbeTime,
-    // probe crossing
-    kProbeCrossingPt,
-    kProbeCrossingEta,
-    kProbeCrossingPhi,
-    kProbeCrossingDXDZ,
-    kProbeCrossingDYDZ,
-    kProbeCrossingLocalX,
-    kProbeCrossingLocalY,
-    // dimuon
-    kDimuonPt,
-    kDimuonMass,
+    // probe at RPC
+    kProbeAtRPCPt,
+    kProbeAtRPCEta,
+    kProbeAtRPCPhi,
+    kProbeAtRPCDXDZ,
+    kProbeAtRPCDYDZ,
+    kProbeAtRPCLocalX,
+    kProbeAtRPCLocalY,
+    // muon pair
+    kPairPt,
+    kPairMass,
     // rpc
     kRegion,
     kRing,
@@ -192,17 +192,17 @@ private:
     {Column::kProbeEta, "probe_eta", "Probe Muon eta"},
     {Column::kProbePhi, "probe_phi", "Probe Muon phi [rad]"},
     {Column::kProbeTime, "probe_time", "Probe Muon time [s]"},
-    // probe crossing
-    {Column::kProbeCrossingPt, "probe_crossing_pt", "Probe crossing pT [GeV]"},
-    {Column::kProbeCrossingEta, "probe_crossing_eta", "Probe crossing eta"},
-    {Column::kProbeCrossingPhi, "probe_crossing_phi", "Probe crossing phi [rad]"},
-    {Column::kProbeCrossingDXDZ, "probe_crossing_dxdz", "Probe crossing dX/dZ"},
-    {Column::kProbeCrossingDYDZ, "probe_crossing_dydz", "Probe crossing dY/dZ"},
-    {Column::kProbeCrossingLocalX, "probe_crossing_local_x", "Probe crossing local x [cm]"},
-    {Column::kProbeCrossingLocalY, "probe_crossing_local_y", "Probe crossing local y [cm]"},
-    // dimuon
-    {Column::kDimuonPt, "dimuon_pt", "Tag+Probe pT [GeV]"},
-    {Column::kDimuonMass, "dimuon_mass", "Tag+Probe mass [GeV]"},
+    // probe at RPC
+    {Column::kProbeAtRPCPt, "probe_at_rpc_pt", "Probe at RPC pT [GeV]"},
+    {Column::kProbeAtRPCEta, "probe_at_rpc_eta", "Probe at RPC eta"},
+    {Column::kProbeAtRPCPhi, "probe_at_rpc_phi", "Probe at RPC phi [rad]"},
+    {Column::kProbeAtRPCDXDZ, "probe_at_rpc_dxdz", "Probe at RPC dX/dZ"},
+    {Column::kProbeAtRPCDYDZ, "probe_at_rpc_dydz", "Probe at RPC dY/dZ"},
+    {Column::kProbeAtRPCLocalX, "probe_at_rpc_local_x", "Probe at RPC local x [cm]"},
+    {Column::kProbeAtRPCLocalY, "probe_at_rpc_local_y", "Probe at RPC local y [cm]"},
+    // muon pair
+    {Column::kPairPt, "pair_pt", "Tag+Probe pT [GeV]"},
+    {Column::kPairMass, "pair_mass", "Tag+Probe mass [GeV]"},
     // hit
     {Column::kResidualX, "residual_x", "Residual X [cm]"},
     {Column::kResidualY, "residual_y", "Residual Y [cm]"},
@@ -251,11 +251,11 @@ MuRPCTnPFlatTableProducer::MuRPCTnPFlatTableProducer(const edm::ParameterSet& co
     m_probe_muon_min_pt{config.getParameter<double>("probeMuonMinPt")},
     m_probe_muon_max_abs_eta{config.getParameter<double>("probeMuonMaxAbsEta")},
     m_probe_muon_id_type{convertStrToMuonIdType(config.getParameter<std::string>("probeMuonIdType"))},
-    // dimuon
-    m_dimuon_check_opposite_sign{config.getParameter<bool>("dimuonCheckOppositeSign")},
-    m_dimuon_min_delta_r{config.getParameter<double>("dimuonMinDeltaR")},
-    m_dimuon_min_mass{config.getParameter<double>("dimuonMinMass")},
-    m_dimuon_max_mass{config.getParameter<double>("dimuonMaxMass")},
+    // muon pair
+    m_pair_check_opposite_sign{config.getParameter<bool>("pairCheckOppositeSign")},
+    m_pair_min_delta_r{config.getParameter<double>("pairMinDeltaR")},
+    m_pair_min_mass{config.getParameter<double>("pairMinMass")},
+    m_pair_max_mass{config.getParameter<double>("pairMaxMass")},
     m_transient_track_builder_token{esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))},
     m_propagator_token{esConsumes(edm::ESInputTag("", "SteppingHelixPropagatorAny"))},
     m_transient_track_builder{nullptr},
@@ -290,10 +290,10 @@ void MuRPCTnPFlatTableProducer::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add<double>("probeMuonMaxAbsEta", 2.1);
   desc.add<std::string>("probeMuonIdType", "tracker");
   //// muon pair
-  desc.add<bool>("dimuonCheckOppositeSign", true);
-  desc.add<double>("dimuonMinDeltaR", 0.1);
-  desc.add<double>("dimuonMinMass", 70.0);
-  desc.add<double>("dimuonMaxMass", 110.0);
+  desc.add<bool>("pairCheckOppositeSign", true);
+  desc.add<double>("pairMinDeltaR", 0.1);
+  desc.add<double>("pairMinMass", 70.0);
+  desc.add<double>("pairMaxMass", 110.0);
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -354,17 +354,17 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
     double_columns.at(Column::kProbePhi).assign(size, result.probe->phi());
     double_columns.at(Column::kProbeTime).assign(size, result.probe->time().timeAtIpInOut);
 
-    const math::XYZTLorentzVector dimuon = result.tag->p4() + result.probe->p4();
-    double_columns.at(Column::kDimuonPt).assign(size, dimuon.pt());
-    double_columns.at(Column::kDimuonMass).assign(size, dimuon.mass());
+    const math::XYZTLorentzVector pair = result.tag->p4() + result.probe->p4();
+    double_columns.at(Column::kPairPt).assign(size, pair.pt());
+    double_columns.at(Column::kPairMass).assign(size, pair.mass());
   }
 
   for (const auto& [muon_chamber_match, hit] : result.measurements) {
     const RPCDetId det_id{muon_chamber_match.id};
 
-    double crossing_pt = DEFAULT_DOUBLE_VAL;
-    double crossing_eta = DEFAULT_DOUBLE_VAL;
-    double crossing_phi = DEFAULT_DOUBLE_VAL;
+    double probe_at_rpc_pt = DEFAULT_DOUBLE_VAL;
+    double probe_at_rpc_eta = DEFAULT_DOUBLE_VAL;
+    double probe_at_rpc_phi = DEFAULT_DOUBLE_VAL;
 
     const RPCRoll* roll = m_rpc_geometry->roll(det_id);
     const reco::Track* best_track = result.probe.isNonnull() ? result.probe->bestTrack() : nullptr;
@@ -373,20 +373,20 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
       const TrajectoryStateOnSurface tsos = m_propagator->propagate(transient_track.impactPointTSCP().theState(),
                                                                     roll->surface());
       if (tsos.isValid()) {
-        const GlobalVector crossing_momentum = tsos.globalMomentum();
-        crossing_pt = crossing_momentum.perp();
-        crossing_eta = crossing_momentum.eta();
-        crossing_phi = crossing_momentum.phi();
+        const GlobalVector probe_at_rpc_momentum = tsos.globalMomentum();
+        probe_at_rpc_pt = probe_at_rpc_momentum.perp();
+        probe_at_rpc_eta = probe_at_rpc_momentum.eta();
+        probe_at_rpc_phi = probe_at_rpc_momentum.phi();
       }
     }
 
-    double_columns.at(Column::kProbeCrossingPt).push_back(crossing_pt);
-    double_columns.at(Column::kProbeCrossingEta).push_back(crossing_eta);
-    double_columns.at(Column::kProbeCrossingPhi).push_back(crossing_phi);
-    double_columns.at(Column::kProbeCrossingDXDZ).push_back(muon_chamber_match.dXdZ);
-    double_columns.at(Column::kProbeCrossingDYDZ).push_back(muon_chamber_match.dYdZ);
-    double_columns.at(Column::kProbeCrossingLocalX).push_back(muon_chamber_match.x);
-    double_columns.at(Column::kProbeCrossingLocalY).push_back(muon_chamber_match.y);
+    double_columns.at(Column::kProbeAtRPCPt).push_back(probe_at_rpc_pt);
+    double_columns.at(Column::kProbeAtRPCEta).push_back(probe_at_rpc_eta);
+    double_columns.at(Column::kProbeAtRPCPhi).push_back(probe_at_rpc_phi);
+    double_columns.at(Column::kProbeAtRPCDXDZ).push_back(muon_chamber_match.dXdZ);
+    double_columns.at(Column::kProbeAtRPCDYDZ).push_back(muon_chamber_match.dYdZ);
+    double_columns.at(Column::kProbeAtRPCLocalX).push_back(muon_chamber_match.x);
+    double_columns.at(Column::kProbeAtRPCLocalY).push_back(muon_chamber_match.y);
 
     // RPC Detector Information
     int_columns.at(Column::kRegion).push_back(det_id.region());
@@ -601,12 +601,12 @@ reco::MuonRef MuRPCTnPFlatTableProducer::findProbeMuon(
     if (not checkIfMuonPassId(mu, primary_vertex, m_probe_muon_id_type)) continue;
     if (mu.track()->originalAlgo() == reco::TrackBase::muonSeededStepOutIn) continue;
 
-    // dimuon
-    if (m_dimuon_check_opposite_sign and (mu.charge() == tag_muon->charge())) continue;
-    if (deltaR(mu, tag_muon->p4()) < m_dimuon_min_delta_r) continue;
-    const double dimuon_mass = (tag_muon->p4() + mu.p4()).mass();
-    if (dimuon_mass < m_dimuon_min_mass) continue;
-    if (dimuon_mass > m_dimuon_max_mass) continue;
+    // muon pair
+    if (m_pair_check_opposite_sign and (mu.charge() == tag_muon->charge())) continue;
+    if (deltaR(mu, tag_muon->p4()) < m_pair_min_delta_r) continue;
+    const double pair_mass = (tag_muon->p4() + mu.p4()).mass();
+    if (pair_mass < m_pair_min_mass) continue;
+    if (pair_mass > m_pair_max_mass) continue;
 
     if (probe_muon.isNull() or (mu.pt() > probe_muon->pt())) {
       probe_muon = reco::MuonRef(muon_collection_handle, muon_idx);
