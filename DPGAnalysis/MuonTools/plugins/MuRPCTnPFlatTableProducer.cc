@@ -108,6 +108,7 @@ private:
 
   // member data
   const nano_mu::EDTokenHandle<reco::VertexCollection> m_primary_vertex_collection_token;
+  const nano_mu::EDTokenHandle<double> m_rho_token;
   const nano_mu::EDTokenHandle<edm::TriggerResults> m_trigger_results_token;
   const nano_mu::EDTokenHandle<trigger::TriggerEvent> m_trigger_event_token;
   const nano_mu::EDTokenHandle<reco::MuonCollection> m_muon_collection_token;
@@ -146,6 +147,9 @@ private:
     kProbePt,
     kProbeEta,
     kProbePhi,
+    kProbeQ,
+    kProbeDXY,
+    kProbeDZ,
     kProbeTime,
     // probe at RPC
     kProbeAtRPCPt,
@@ -158,6 +162,10 @@ private:
     // muon pair
     kPairPt,
     kPairMass,
+    // event
+    kNPV,
+    kNGoodPV,
+    kRho,
     // rpc
     kRegion,
     kRing,
@@ -191,6 +199,8 @@ private:
     {Column::kProbePt, "probe_pt", "Probe Muon pT [GeV]"},
     {Column::kProbeEta, "probe_eta", "Probe Muon eta"},
     {Column::kProbePhi, "probe_phi", "Probe Muon phi [rad]"},
+    {Column::kProbeDXY, "probe_dxy", "Probe Muon dxy [cm]"},
+    {Column::kProbeDZ, "probe_dz", "Probe Muon dz [cm]"},
     {Column::kProbeTime, "probe_time", "Probe Muon time [s]"},
     // probe at RPC
     {Column::kProbeAtRPCPt, "probe_at_rpc_pt", "Probe at RPC pT [GeV]"},
@@ -203,6 +213,8 @@ private:
     // muon pair
     {Column::kPairPt, "pair_pt", "Tag+Probe pT [GeV]"},
     {Column::kPairMass, "pair_mass", "Tag+Probe mass [GeV]"},
+    // event
+    {Column::kRho, "rho", "fixed-grid event energy density"},
     // hit
     {Column::kResidualX, "residual_x", "Residual X [cm]"},
     {Column::kResidualY, "residual_y", "Residual Y [cm]"},
@@ -213,6 +225,12 @@ private:
   };
 
   const std::vector<std::tuple<Column, std::string, std::string> > INT_COLUMNS = {
+    // probe
+    {Column::kProbeQ, "probe_q", "Probe Muon charge"},
+    // event
+    {Column::kNPV, "n_pv", "Number of primary vertices"},
+    {Column::kNGoodPV, "n_good_pv", "Number of good primary vertices"},
+    // rpc
     {Column::kRegion, "region", "region"},
     {Column::kRing, "ring", "ring"},
     {Column::kStation, "station", "station"},
@@ -235,6 +253,7 @@ private:
 MuRPCTnPFlatTableProducer::MuRPCTnPFlatTableProducer(const edm::ParameterSet& config)
   : MuBaseFlatTableProducer(config),
     m_primary_vertex_collection_token{config, consumesCollector(), "primaryVertexCollectionTag"},
+    m_rho_token{config, consumesCollector(), "rhoTag"},
     m_trigger_results_token{config, consumesCollector(), "triggerResultsTag"},
     m_trigger_event_token{config, consumesCollector(), "triggerEventTag"},
     m_muon_collection_token{config, consumesCollector(), "muonCollectionTag"},
@@ -272,6 +291,7 @@ void MuRPCTnPFlatTableProducer::fillDescriptions(edm::ConfigurationDescriptions&
   // MuRPCTnPFlatTableProducer
   //// input tags
   desc.add<edm::InputTag>("primaryVertexCollectionTag", edm::InputTag{"offlinePrimaryVertices"});
+  desc.add<edm::InputTag>("rhoTag", edm::InputTag{"fixedGridRhoFastjetAll"});
   desc.add<edm::InputTag>("triggerResultsTag", edm::InputTag{"TriggerResults::HLT"});
   desc.add<edm::InputTag>("triggerEventTag", edm::InputTag{"hltTriggerSummaryAOD::HLT"});
   desc.add<edm::InputTag>("muonCollectionTag", edm::InputTag{"muons"});
@@ -317,6 +337,25 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
   const rpctnp::Result result = performTagAndProbe(ev);
   const size_t size = result.measurements.size();
 
+  const edm::Handle<reco::VertexCollection> primary_vertex_collection_handle =
+    m_primary_vertex_collection_token.conditionalGet(ev);
+  const edm::Handle<double> rho_handle = m_rho_token.conditionalGet(ev);
+
+  int n_pv = DEFAULT_INT_VAL;
+  int n_good_pv = DEFAULT_INT_VAL;
+  if (primary_vertex_collection_handle.isValid()) {
+    n_pv = static_cast<int>(primary_vertex_collection_handle->size());
+    n_good_pv = 0;
+    for (const reco::Vertex& vertex : *primary_vertex_collection_handle) {
+      if (not vertex.isFake() and vertex.ndof() > 4 and std::abs(vertex.z()) <= 24 and
+          vertex.position().rho() <= 2) {
+        ++n_good_pv;
+      }
+    }
+  }
+
+  const double rho = rho_handle.isValid() ? *rho_handle : DEFAULT_DOUBLE_VAL;
+
   /////////////////////////////////////////////////////////////////////////////
   // STEP 2: CREATE COLUMNS
   /////////////////////////////////////////////////////////////////////////////
@@ -353,10 +392,27 @@ void MuRPCTnPFlatTableProducer::fillTable(edm::Event& ev) {
     double_columns.at(Column::kProbeEta).assign(size, result.probe->eta());
     double_columns.at(Column::kProbePhi).assign(size, result.probe->phi());
     double_columns.at(Column::kProbeTime).assign(size, result.probe->time().timeAtIpInOut);
+    int_columns.at(Column::kProbeQ).assign(size, result.probe->charge());
+
+    double probe_dxy = DEFAULT_DOUBLE_VAL;
+    double probe_dz = DEFAULT_DOUBLE_VAL;
+    const reco::Track* probe_best_track = result.probe->bestTrack();
+    if (probe_best_track != nullptr and primary_vertex_collection_handle.isValid() and
+        not primary_vertex_collection_handle->empty()) {
+      const reco::Vertex& primary_vertex = primary_vertex_collection_handle->at(0);
+      probe_dxy = probe_best_track->dxy(primary_vertex.position());
+      probe_dz = probe_best_track->dz(primary_vertex.position());
+    }
+    double_columns.at(Column::kProbeDXY).assign(size, probe_dxy);
+    double_columns.at(Column::kProbeDZ).assign(size, probe_dz);
 
     const math::XYZTLorentzVector pair = result.tag->p4() + result.probe->p4();
     double_columns.at(Column::kPairPt).assign(size, pair.pt());
     double_columns.at(Column::kPairMass).assign(size, pair.mass());
+
+    double_columns.at(Column::kRho).assign(size, rho);
+    int_columns.at(Column::kNPV).assign(size, n_pv);
+    int_columns.at(Column::kNGoodPV).assign(size, n_good_pv);
   }
 
   for (const auto& [muon_chamber_match, hit] : result.measurements) {
