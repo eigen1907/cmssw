@@ -597,6 +597,10 @@ reco::MuonRef MuRPCTnPFlatTableProducer::findProbeMuon(
   reco::MuonRef probe_muon;
   double probe_muon_pt = -1.0;
 
+  const reco::TrackRef tag_track_ref = tag_muon->muonBestTrack();
+  if (tag_track_ref.isNull()) return probe_muon;
+  const double tag_dz = tag_track_ref->dz(primary_vertex.position());
+
   for (size_t muon_idx = 0; muon_idx < muon_collection_handle->size(); ++muon_idx) {
     if (muon_idx == tag_muon.index()) continue;
 
@@ -610,6 +614,11 @@ reco::MuonRef MuRPCTnPFlatTableProducer::findProbeMuon(
     if (probe_track.pt() < m_probe_muon_min_pt) continue;
     if (std::abs(probe_track.eta()) > m_probe_muon_max_abs_eta) continue;
     if (probe_track.originalAlgo() == reco::TrackBase::muonSeededStepOutIn) continue;
+    const double probe_dxy = probe_track.dxy(primary_vertex.position());
+    const double probe_dz = probe_track.dz(primary_vertex.position());
+    if (std::abs(probe_dxy) >= 0.2) continue;
+    if (std::abs(probe_dz) >= 0.5) continue;
+    if (std::abs(tag_dz - probe_dz) >= 0.5) continue;
 
     // muon pair
     const reco::Candidate::LorentzVector probe_p4 = rpctnp::makeMuonP4(probe_track);
