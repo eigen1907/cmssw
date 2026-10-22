@@ -1,5 +1,8 @@
 <library name="RecoMuonMuonIdentificationPlugins" file="*.cc">
   <use name="DataFormats/Common"/>
+  <use name="DataFormats/CSCRecHit"/>
+  <use name="DataFormats/DTRecHit"/>
+  <use name="DataFormats/GEMRecHit"/>
   <use name="DataFormats/MuonDetId"/>
   <use name="DataFormats/MuonReco"/>
   <use name="DataFormats/RecoCandidate"/>
@@ -8,9 +11,14 @@
   <use name="FWCore/MessageLogger"/>
   <use name="FWCore/ParameterSet"/>
   <use name="FWCore/PluginManager"/>
+  <use name="FWCore/Utilities"/>
   <use name="Geometry/CommonDetUnit" source_only="1"/>
   <use name="Geometry/Records"/>
   <use name="Geometry/CaloTopology"/>
+  <use name="Geometry/CSCGeometry"/>
+  <use name="Geometry/DTGeometry"/>
+  <use name="Geometry/GEMGeometry"/>
+  <use name="PhysicsTools/ONNXRuntime"/>
   <use name="PhysicsTools/IsolationAlgos"/>
   <use name="PhysicsTools/SelectorUtils"/>
   <use name="RecoMuon/MuonIdentification"/>

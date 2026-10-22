@@ -48,6 +48,16 @@ MuonIdProducer::MuonIdProducer(const edm::ParameterSet& iConfig)
   minNumberOfMatches_ = iConfig.getParameter<int>("minNumberOfMatches");
   addExtraSoftMuons_ = iConfig.getParameter<bool>("addExtraSoftMuons");
   maxAbsEta_ = iConfig.getParameter<double>("maxAbsEta");
+  const auto deepMuonScores = iConfig.getParameter<edm::InputTag>("deepMuonScores");
+  useDeepMuonScores_ = !deepMuonScores.label().empty();
+  applyDeepMuonFilter_ = iConfig.getParameter<bool>("applyDeepMuonFilter");
+  deepMuonThreshold_ = iConfig.getParameter<double>("deepMuonThreshold");
+  if (applyDeepMuonFilter_ && !useDeepMuonScores_)
+    throw cms::Exception("Configuration") << "applyDeepMuonFilter requires deepMuonScores";
+  if (!std::isfinite(deepMuonThreshold_) || deepMuonThreshold_ < 0. || deepMuonThreshold_ > 1.)
+    throw cms::Exception("Configuration") << "deepMuonThreshold must be a probability between 0 and 1";
+  if (useDeepMuonScores_)
+    deepMuonScoresToken_ = consumes<edm::ValueMap<float>>(deepMuonScores);
   maxAbsDx_ = iConfig.getParameter<double>("maxAbsDx");
   maxAbsPullX2_ = iConfig.getParameter<double>("maxAbsPullX");
   maxAbsPullX2_ *= maxAbsPullX2_;
@@ -462,6 +472,9 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 
   init(iEvent, iSetup);
 
+  // Consume the scores in both ONNX modes, including the inference-only benchmark.
+  const auto* deepMuonScores = useDeepMuonScores_ ? &iEvent.get(deepMuonScoresToken_) : nullptr;
+
   if (fillShowerDigis_ && fillMatching_)
     theShowerDigiFiller_->getDigis(iEvent);
 
@@ -567,6 +580,25 @@ void MuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
           continue;
       }
       const auto& trackRef = reco::TrackRef(innerTrackCollectionHandle_, i);
+      if (deepMuonScores != nullptr) {
+        ++deepMuonConsidered_;
+        const float score = (*deepMuonScores)[trackRef];
+        // Negative scores mark tracks outside the training selection. Invalid scores fail open.
+        if (applyDeepMuonFilter_ && std::isfinite(score) && score >= 0.f && score < deepMuonThreshold_) {
+          bool globalMuonTrack = false;
+          for (const auto& muon : *outputMuons) {
+            if (muon.isGlobalMuon() && muon.innerTrack() == trackRef) {
+              globalMuonTrack = true;
+              break;
+            }
+          }
+          if (!globalMuonTrack) {
+            ++deepMuonRejected_;
+            continue;
+          }
+          ++deepMuonGlobalProtected_;
+        }
+      }
       bool splitTrack = false;
       if (track.extra().isAvailable() && TrackDetectorAssociator::crossedIP(track))
         splitTrack = true;
@@ -1500,9 +1532,20 @@ bool MuonIdProducer::checkLinks(const reco::MuonTrackLinks* links) const {
   return true;
 }
 
+void MuonIdProducer::endStream() {
+  if (useDeepMuonScores_)
+    edm::LogVerbatim("DeepMuonReco") << "DeepMuonReco selection: filter=" << applyDeepMuonFilter_
+                                    << " considered=" << deepMuonConsidered_ << " rejected=" << deepMuonRejected_
+                                    << " globalProtected=" << deepMuonGlobalProtected_;
+}
+
 void MuonIdProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.setAllowAnything();
+
+  desc.add<edm::InputTag>("deepMuonScores", edm::InputTag(""));
+  desc.add<bool>("applyDeepMuonFilter", false);
+  desc.add<double>("deepMuonThreshold", 0.5);
 
   desc.add<bool>("arbitrateTrackerMuons", false);
   desc.add<bool>("storeCrossedHcalRecHits", false);

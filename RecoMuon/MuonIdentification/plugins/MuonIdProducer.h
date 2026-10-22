@@ -75,6 +75,7 @@ public:
 
   void produce(edm::Event&, const edm::EventSetup&) override;
   void beginRun(const edm::Run&, const edm::EventSetup&) override;
+  void endStream() override;
 
   static double sectorPhi(const DetId& id);
 
@@ -204,6 +205,14 @@ private:
   int minNumberOfMatches_;
   double maxAbsEta_;
   bool addExtraSoftMuons_;
+
+  bool useDeepMuonScores_ = false;
+  bool applyDeepMuonFilter_ = false;
+  double deepMuonThreshold_ = 0.5;
+  edm::EDGetTokenT<edm::ValueMap<float>> deepMuonScoresToken_;
+  unsigned long long deepMuonConsidered_ = 0;
+  unsigned long long deepMuonRejected_ = 0;
+  unsigned long long deepMuonGlobalProtected_ = 0;
 
   // matching
   double maxAbsDx_;
